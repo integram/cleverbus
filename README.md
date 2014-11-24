@@ -25,7 +25,7 @@ With CleverBus you have the whole source code in your hands and the community ar
 ## Getting Started
 To help you get started, try the following links:
 
-Getting Started: [https://cleverbus.atlassian.net/wiki/display/CLVBUS/Getting+started](https://cleverbus.atlassian.net/wiki/display/CLVBUS/Getting+started)
+Why CleverBus?: [https://cleverbus.atlassian.net/wiki/x/DgAI](https://cleverbus.atlassian.net/wiki/x/DgAI)
 
 Building: [https://cleverbus.atlassian.net/wiki/x/HIAR](https://cleverbus.atlassian.net/wiki/x/HIAR)
 
