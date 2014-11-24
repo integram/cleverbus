@@ -37,6 +37,7 @@ import javax.xml.soap.SOAPFault;
 import javax.xml.soap.SOAPMessage;
 import javax.xml.soap.SOAPPart;
 
+import org.apache.commons.codec.binary.Hex;
 import org.cleverbus.api.asynch.AsynchConstants;
 import org.cleverbus.api.entity.Message;
 import org.cleverbus.api.entity.MsgStateEnum;
@@ -127,9 +128,10 @@ public class RequestResponseTest extends AbstractCoreDbTest {
 
         // action
         mock.expectedMessageCount(1);
-        producer.sendBody(REQUEST);
+        final byte[] byteBody = {(byte) 0xe0, 0x4f, (byte) 0xd0, 0x20};
+        producer.sendBody(byteBody);
 
-        assertRequestResponse(null, null, null);
+        assertRequestResponse(Hex.encodeHexString(byteBody), null, null, null);
 
 
         // try it again but change pattern for filtering
@@ -232,7 +234,7 @@ public class RequestResponseTest extends AbstractCoreDbTest {
 
         producer.sendBodyAndHeader(REQUEST, AsynchConstants.MSG_HEADER, msg);
 
-        assertRequestResponse(msg, null, null);
+        assertRequestResponse(REQUEST, msg, null, null);
     }
 
     private Message insertMessage() {
@@ -264,7 +266,7 @@ public class RequestResponseTest extends AbstractCoreDbTest {
         mock.expectedMessageCount(1);
         producer.sendBody(REQUEST);
 
-        assertRequestResponse(null, null, null);
+        assertRequestResponse(REQUEST, null, null, null);
     }
 
     /**
@@ -287,7 +289,7 @@ public class RequestResponseTest extends AbstractCoreDbTest {
             producer.sendBody(REQUEST);
             fail("Target route was thrown exception.");
         } catch (CamelExecutionException ex) {
-            assertRequestResponse(null, "java.lang.IllegalStateException: err", null);
+            assertRequestResponse(REQUEST, null, "java.lang.IllegalStateException: err", null);
         }
     }
 
@@ -331,7 +333,7 @@ public class RequestResponseTest extends AbstractCoreDbTest {
             producer.sendBody(REQUEST);
             fail("Target route was thrown exception.");
         } catch (CamelExecutionException ex) {
-            assertRequestResponse(null,
+            assertRequestResponse(REQUEST, null,
                     "org.springframework.ws.soap.client.SoapFaultClientException: There is one error", soapFault);
         }
     }
@@ -372,7 +374,7 @@ public class RequestResponseTest extends AbstractCoreDbTest {
         getCamelContext().addRoutes(route);
     }
 
-    private void assertRequestResponse(@Nullable Message msg, @Nullable String failedRes,
+    private void assertRequestResponse(String requestBody, @Nullable Message msg, @Nullable String failedRes,
                         @Nullable String resEnvelope) throws Exception {
 
         mock.assertIsSatisfied();
@@ -389,7 +391,7 @@ public class RequestResponseTest extends AbstractCoreDbTest {
         assertThat(requests.size(), is(1));
         Request request = requests.get(0);
         assertThat(request.getUri(), is(TARGET_URI));
-        assertThat(request.getRequest(), is(REQUEST));
+        assertThat(request.getRequest(), is(requestBody));
         assertThat(request.getMessage(), is(msg));
         if (msg != null) {
             assertThat(request.getResponseJoinId(), is(msg.getCorrelationId()));

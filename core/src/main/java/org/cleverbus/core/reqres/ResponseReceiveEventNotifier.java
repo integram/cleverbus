@@ -16,6 +16,8 @@
 
 package org.cleverbus.core.reqres;
 
+import static org.cleverbus.core.reqres.RequestResponseUtils.transformBody;
+
 import java.io.StringWriter;
 import java.util.EventObject;
 import java.util.regex.Pattern;
@@ -107,8 +109,7 @@ public class ResponseReceiveEventNotifier extends EventNotifierBase<ExchangeSent
                 // If the Exchange is using InOnly as the MEP, then we may think that the Exchange has no OUT message.
                 // Exchange.getOut creates an out message if there is none. So if we want to check if there is an out
                 // message then we should use exchange.hasOut instead
-                resStr = exchange.hasOut() ? exchange.getOut().getBody(String.class)
-                        : exchange.getIn().getBody(String.class);
+                resStr = exchange.hasOut() ? transformBody(exchange.getOut()) : transformBody(exchange.getIn());
             }
 
             // note: there are Camel components which don't return responses, there are one-way only
@@ -207,4 +208,6 @@ public class ResponseReceiveEventNotifier extends EventNotifierBase<ExchangeSent
 
         return exceptionString;
     }
+
+
 }

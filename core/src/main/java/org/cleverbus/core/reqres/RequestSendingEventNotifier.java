@@ -16,6 +16,8 @@
 
 package org.cleverbus.core.reqres;
 
+import static org.cleverbus.core.reqres.RequestResponseUtils.transformBody;
+
 import java.util.EventObject;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -87,8 +89,8 @@ public class RequestSendingEventNotifier extends EventNotifierBase<ExchangeSendi
         if (filter(endpointUri, endpointFilterPattern)) {
             Message msg = event.getExchange().getIn().getHeader(AsynchConstants.MSG_HEADER, Message.class);
 
-            // create request
-            String reqBody = ((Exchange) event.getSource()).getIn().getBody(String.class);
+            // create request a transforms data to string to store
+            String reqBody = transformBody(((Exchange) event.getSource()).getIn());
             String joinId = createResponseJoinId(event.getExchange());
 
             Request req = Request.createRequest(endpointUri, joinId, reqBody, msg);
@@ -116,11 +118,7 @@ public class RequestSendingEventNotifier extends EventNotifierBase<ExchangeSendi
         Assert.hasText(endpointURI, "the endpointURI must be defined");
 
         Matcher matcher = pattern.matcher(endpointURI);
-        if (matcher.matches()) {
-            return true;
-        }
-
-        return false;
+        return matcher.matches();
     }
 
     /**
