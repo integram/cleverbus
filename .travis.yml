@@ -6,3 +6,4 @@ script: mvn test
 notifications:
   email:
     - petr.juza@cleverlance.com
+  hipchat: 50b4c7f589f315b5f809a69bdcb05e@Cleverbus
