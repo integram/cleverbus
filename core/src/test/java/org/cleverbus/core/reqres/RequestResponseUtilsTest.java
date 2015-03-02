@@ -37,17 +37,30 @@ public class RequestResponseUtilsTest {
     @Test
     public void testTransformBody() {
         Message msg = new DefaultMessage();
+        msg.setBody(null);
+        // null
+        assertThat(transformBody(msg), is(""));
+
+        // text
+        msg = new DefaultMessage();
         msg.setBody("text");
         assertThat(transformBody(msg), is("text"));
 
-        final byte[] byteBody = {(byte) 0xe0, 0x4f, (byte) 0xd0, 0x20};
+        // byte array, unknown format
+        byte[] byteBody = {(byte) 0xe0, 0x4f, (byte) 0xd0, 0x20};
         msg.setBody(byteBody);
         assertThat(transformBody(msg), is(Hex.encodeHexString(byteBody)));
 
+        // message
         org.cleverbus.api.entity.Message entity = new org.cleverbus.api.entity.Message();
         entity.setMsgId(1L);
         entity.setCorrelationId(UUID.randomUUID().toString());
         msg.setBody(entity);
         assertThat(transformBody(msg), is(entity.toHumanString()));
+
+        // XML
+        byteBody = "<test>valueč</test>".getBytes();
+        msg.setBody(byteBody);
+        assertThat(transformBody(msg), is("<test>valueč</test>"));
     }
 }

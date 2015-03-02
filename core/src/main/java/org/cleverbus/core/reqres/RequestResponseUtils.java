@@ -47,6 +47,13 @@ public final class RequestResponseUtils {
         if (obj.getBody() instanceof String) {
             return (String) obj.getBody();
         } else if (obj.getBody() instanceof byte[]) {
+            // common exchange format is XML
+            String result = obj.getBody(String.class) == null ? new String((byte[]) obj.getBody())
+                : obj.getBody(String.class);
+            if (result != null && result.trim().length() > 0 && result.trim().startsWith("<")
+                && result.trim().endsWith(">")) {
+                return result.trim();
+            }
             return Hex.encodeHexString((byte[]) obj.getBody());
         } else if (obj.getBody() instanceof HumanReadable) {
             return ((HumanReadable) obj.getBody()).toHumanString();
