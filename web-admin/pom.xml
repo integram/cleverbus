@@ -88,10 +88,6 @@
             <id>esb.psSql</id>
             <dependencies>
                 <dependency>
-                    <groupId>net.sourceforge.jtds</groupId>
-                    <artifactId>jtds</artifactId>
-                </dependency>
-                <dependency>
                     <groupId>org.postgresql</groupId>
                     <artifactId>postgresql</artifactId>
                 </dependency>
@@ -102,11 +98,6 @@
             <!-- profile for PostgreSQL (libraries are provided) -->
             <id>esb.psSql.prod</id>
             <dependencies>
-                <dependency>
-                    <groupId>net.sourceforge.jtds</groupId>
-                    <artifactId>jtds</artifactId>
-                    <scope>provided</scope>
-                </dependency>
                 <dependency>
                     <groupId>org.postgresql</groupId>
                     <artifactId>postgresql</artifactId>
