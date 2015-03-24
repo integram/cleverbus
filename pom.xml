@@ -35,11 +35,32 @@
     </developers>
 
     <scm>
-        <connection>scm:git:https://github.com/integram/cleverbus.git</connection>
-        <developerConnection>scm:git:https://github.com/integram/cleverbus.git</developerConnection>
-        <url>https://github.com/integram/cleverbus.git</url>
-      <tag>HEAD</tag>
-  </scm>
+        <connection>scm:git:https://repo.cleverlance.com/git/org.cleverbus.integration</connection>
+        <developerConnection>scm:git:https://repo.cleverlance.com/git/org.cleverbus.integration</developerConnection>
+        <url>https://repo.cleverlance.com/git/org.cleverbus.integration</url>
+    </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>nexus</id>
+            <name>Cleverlance Release Repository</name>
+            <url>https://maven.cleverlance.com/nexus/content/repositories/releases</url>
+            <uniqueVersion>false</uniqueVersion>
+        </repository>
+        <snapshotRepository>
+            <id>nexus</id>
+            <name>Cleverlance Snapshot Repository</name>
+            <url>https://maven.cleverlance.com/nexus/content/repositories/snapshots</url>
+            <uniqueVersion>false</uniqueVersion>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <repositories>
+        <repository>
+            <id>nexus</id>
+            <url>https://maven.cleverlance.com/nexus/content/groups/public</url>
+        </repository>
+    </repositories>
 
     <modules>
         <module>common</module>
