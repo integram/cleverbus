@@ -16,11 +16,7 @@
 
 package org.cleverbus.core.camel;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.LoggingLevel;
-import org.apache.camel.Processor;
-import org.apache.camel.Produce;
-import org.apache.camel.ProducerTemplate;
+import org.apache.camel.*;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.spi.Synchronization;
@@ -58,13 +54,13 @@ public class CamelStopOnCompletionTest extends CamelTestSupport {
         return new RouteBuilder() {
             @Override
             public void configure() throws Exception {
-                onCompletion()
+                onCompletion().parallelProcessing()
                         .transform(body().append("-OnCompletion"))
                         .log(LoggingLevel.WARN, "OnCompletion")
                         .to("mock:test");
 
                 from("direct:routeONE")
-                    .onCompletion()
+                    .onCompletion().parallelProcessing()
                         .transform(body().append("-OnCompletionInRoute"))
                         .log(LoggingLevel.WARN, "OnCompletionInRoute")
                         .to("mock:test")
@@ -110,7 +106,7 @@ public class CamelStopOnCompletionTest extends CamelTestSupport {
                         .log(LoggingLevel.WARN, "entered finally");
 
                 from("direct:routeTWO")
-                    .onCompletion()
+                    .onCompletion().parallelProcessing()
                         .transform(body().append("-OnCompletionInRoute2"))
                         .log(LoggingLevel.WARN, "OnCompletionInRoute2")
                         .to("mock:test")

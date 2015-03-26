@@ -44,7 +44,7 @@
 
     <properties>
         <!-- java language version -->
-        <java.version>1.6</java.version>
+        <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <cleverBus-version>${cleverBusVersion}</cleverBus-version>
@@ -356,7 +356,7 @@
                     <version>3.0.1</version>
                     <configuration>
                         <sourceEncoding>utf-8</sourceEncoding>
-                        <targetJdk>1.6</targetJdk>
+                        <targetJdk>1.8</targetJdk>
                         <!-- exclude generated code -->
                         <excludes>
                             <exclude>**/in/**/ws/*</exclude>
@@ -407,8 +407,8 @@
                         <additionalDependencies>
                             <additionalDependency>
                                 <groupId>org.hibernate.javax.persistence</groupId>
-                                <artifactId>hibernate-jpa-2.0-api</artifactId>
-                                <version>1.0.1.Final</version>
+                                <artifactId>hibernate-jpa-2.1-api</artifactId>
+                                <version>1.0.0.Final</version>
                             </additionalDependency>
                         </additionalDependencies>
                     </configuration>
