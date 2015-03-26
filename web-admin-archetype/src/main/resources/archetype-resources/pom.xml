@@ -353,10 +353,10 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-pmd-plugin</artifactId>
-                    <version>3.0.1</version>
+                    <version>3.4</version>
                     <configuration>
                         <sourceEncoding>utf-8</sourceEncoding>
-                        <targetJdk>1.8</targetJdk>
+                        <targetJdk>${java.version}</targetJdk>
                         <!-- exclude generated code -->
                         <excludes>
                             <exclude>**/in/**/ws/*</exclude>
