@@ -27,6 +27,7 @@ import static org.springframework.core.annotation.AnnotationUtils.findAnnotation
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -34,7 +35,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.cleverbus.api.exception.ErrorExtEnum;
 import org.cleverbus.api.route.CamelConfiguration;
-
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.RoutesBuilder;
@@ -118,21 +118,27 @@ public abstract class AbstractTest {
         getCamelContext().getShutdownStrategy().setTimeout(1);// no shutdown timeout:
         getCamelContext().getShutdownStrategy().setTimeUnit(TimeUnit.NANOSECONDS);
         getCamelContext().getShutdownStrategy().setShutdownNowOnTimeout(true);// no pending exchanges
-
-        Map<String, Object> beansMap = getApplicationContext().getBeansWithAnnotation(CamelConfiguration.class);
-
+        
+        Map<String, Class<RoutesBuilder>> beans = new HashMap<String, Class<RoutesBuilder>>();
+        
+        String[] beanNames = getApplicationContext().getBeanDefinitionNames();
+        
+        for (String beanName : beanNames) {
+        	Class beanClass = getApplicationContext().getType(beanName);
+        	
+        	if (beanClass.isAnnotationPresent(CamelConfiguration.class)) {
+        		beans.put(beanName, beanClass);
+        	}
+		}        
+        
         Set<Class> activeRoutesClasses = getActiveRoutes();
 
-        for (Map.Entry<String, Object> entry : beansMap.entrySet()) {
-            RoutesBuilder routesBuilder = (RoutesBuilder) entry.getValue();
+        for (Map.Entry<String, Class<RoutesBuilder>> entry : beans.entrySet()) {
 
-            if (initAllRoutes) {
-                getCamelContext().addRoutes(routesBuilder);
-            } else {
-                for (Class routesClass : activeRoutesClasses) {
-                    if (routesBuilder.getClass().isAssignableFrom(routesClass)) {
-                        getCamelContext().addRoutes(routesBuilder);
-                    }
+            for (Class routesClass : activeRoutesClasses) {
+                
+            	if (entry.getValue().isAssignableFrom(routesClass)) {
+                    getCamelContext().addRoutes((RoutesBuilder)getApplicationContext().getBean(entry.getKey()));
                 }
             }
         }
