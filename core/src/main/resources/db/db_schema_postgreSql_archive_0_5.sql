@@ -1,28 +1,39 @@
 ﻿--
 -- DB archive installation script v 0.5 for db version 0.4
+-- Run with DB admin rights!
 --
---drop schema arch;
+begin transaction;
 
+drop schema if exists arch cascade;
 create schema arch;
+alter schema  arch owner to  cbssesb;
 
-ALTER SCHEMA cleverbus OWNER TO cleverbus;
-
-drop tablespace arch;
-
-CREATE TABLESPACE arch
-  OWNER cleverbus
-  LOCATION 'c:\\Program Files\\PostgreSQL\\9.3\\data\\pg_tblspc\\arch';
+end transaction;
 
 --
--- Default tablespace where the objects going to be created
+-- drop cannot be nested in transaction block, tablespace must be emty
+--
+drop tablespace if exists cbssesb_arch;
+
+-- 
+-- creates cbssesb_arch tablespace, the destination directory must exists
+--
+CREATE TABLESPACE cbssesb_arch
+  OWNER cbssesb
+  LOCATION 'c:\\Program Files\\PostgreSQL\\9.3\\data\\pg_tblspc\\cbssesb_arch';
+
+begin transaction;
+
+--
+-- Setting default tablespace where the objects going to be created
 -- It must be created first
-SET default_tablespace = arch;
+SET default_tablespace = cbssesb_arch;
 SET search_path = arch, pg_catalog;
 
 --
 -- table: archive_message
 --
-drop table archive_message cascade;
+drop table if exists archive_message cascade;
 
 create table archive_message (
   msg_id bigint not null,
@@ -53,12 +64,12 @@ create table archive_message (
   funnel_component_id character varying(50)
 );
 
-ALTER TABLE archive_message OWNER TO cleverbus;
+ALTER TABLE archive_message OWNER TO cbssesb;
 
 --
 -- table: archive_external_call
 --
-drop table archive_external_call cascade;
+drop table if exists archive_external_call cascade;
 
 create table archive_external_call (
   call_id bigint NOT NULL,
@@ -72,7 +83,7 @@ create table archive_external_call (
   state character varying(20) not null
 );
 
-ALTER TABLE archive_external_call OWNER TO cleverbus;
+ALTER TABLE archive_external_call OWNER TO cbssesb;
 
 
 --
@@ -90,7 +101,7 @@ create table archive_request (
     req_timestamp timestamp not null
 );
 
-ALTER TABLE archive_request OWNER TO cleverbus;
+ALTER TABLE archive_request OWNER TO cbssesb;
 
 
 create table archive_response (
@@ -103,13 +114,13 @@ create table archive_response (
     msg_id int8 null
 );
 
-ALTER TABLE archive_response OWNER TO cleverbus;
+ALTER TABLE archive_response OWNER TO cbssesb;
 
 --
 -- function: archive_records(integer)
--- input: number of months after which the message is to be archived
+-- input: number of days after which the message is to be archived, minimum is 7
 --
-drop function archive_records(integer);
+drop function if exists archive_records(integer);
 
 create or replace function archive_records(integer)
   RETURNS void as
@@ -119,9 +130,9 @@ $BODY$
   begin
     IF $1 < 2
   then
-     KeepTime := NOW() - INTERVAL '2 months';
+     KeepTime := NOW() - INTERVAL '7 day';
   else
-     KeepTime := NOW() - '1 months'::interval * $1;
+     KeepTime := NOW() - '1 day'::interval * $1;
   end if;
 
 RAISE NOTICE 'Older records in the number of months: %', $1;
@@ -258,5 +269,24 @@ end;
 $BODY$
   language plpgsql VOLATILE
   COST 100;
-ALTER FUNCTION arch.archive_records(integer) OWNER TO cleverbus;
+ALTER FUNCTION arch.archive_records(integer) OWNER TO cbssesb;
 ALTER FUNCTION arch.archive_records(integer) SET search_path=public,arch;
+COMMENT ON FUNCTION arch.archive_records(integer) IS 'input: number of days after which the message is to be archived, minimum is 7.';
+
+CREATE OR REPLACE FUNCTION arch."rebuildIndexes"()
+  RETURNS void AS
+$BODY$reindex table message;
+reindex table external_call;
+reindex table request;
+reindex table response;$BODY$
+  LANGUAGE sql VOLATILE
+  COST 100;
+ALTER FUNCTION arch."rebuildIndexes"() SET default_tablespace='cbssesb';
+
+ALTER FUNCTION arch."rebuildIndexes"() SET search_path=cbssesb, pg_catalog;
+
+ALTER FUNCTION arch."rebuildIndexes"()
+  OWNER TO cbssesb;
+
+
+end transaction;
