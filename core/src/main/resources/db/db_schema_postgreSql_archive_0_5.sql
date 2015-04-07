@@ -273,7 +273,7 @@ ALTER FUNCTION arch.archive_records(integer) OWNER TO cbssesb;
 ALTER FUNCTION arch.archive_records(integer) SET search_path=public,arch;
 COMMENT ON FUNCTION arch.archive_records(integer) IS 'input: number of days after which the message is to be archived, minimum is 7.';
 
-CREATE OR REPLACE FUNCTION arch."rebuildIndexes"()
+CREATE OR REPLACE FUNCTION arch.rebuildIndexes()
   RETURNS void AS
 $BODY$reindex table message;
 reindex table external_call;
@@ -281,11 +281,11 @@ reindex table request;
 reindex table response;$BODY$
   LANGUAGE sql VOLATILE
   COST 100;
-ALTER FUNCTION arch."rebuildIndexes"() SET default_tablespace='cbssesb';
+ALTER FUNCTION arch.rebuildIndexes() SET default_tablespace='cbssesb';
 
-ALTER FUNCTION arch."rebuildIndexes"() SET search_path=cbssesb, pg_catalog;
+ALTER FUNCTION arch.rebuildIndexes() SET search_path=cbssesb, pg_catalog;
 
-ALTER FUNCTION arch."rebuildIndexes"()
+ALTER FUNCTION arch.rebuildIndexes()
   OWNER TO cbssesb;
 
 
