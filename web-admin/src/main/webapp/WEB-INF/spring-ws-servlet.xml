@@ -14,6 +14,7 @@
     <import resource="classpath:/META-INF/sp_ws.xml"/>
     <import resource="classpath:/META-INF/sp_ws_wsdl.xml"/>
     <import resource="classpath:/META-INF/sp_jmx.xml"/>
+    <import resource="classpath:/META-INF/sp_archiving.xml"/>
 
     <context:annotation-config />
     <tx:annotation-driven transaction-manager="jpaTxManager"/>

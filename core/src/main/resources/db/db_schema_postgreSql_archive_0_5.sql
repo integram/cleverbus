@@ -1,4 +1,4 @@
-﻿--
+﻿﻿--
 -- DB archive installation script v 0.5 for db version 0.4
 -- Run with DB admin rights!
 --
@@ -123,7 +123,7 @@ ALTER TABLE archive_response OWNER TO cbssesb;
 drop function if exists archive_records(integer);
 
 create or replace function archive_records(integer)
-  RETURNS void as
+  RETURNS text as
 $BODY$
   declare
       KeepTime TIMESTAMP;
@@ -263,7 +263,7 @@ insert into response select * from tmp_resp;
 insert into message select * from tmp_msg;
 insert into external_call select * from tmp_extcall;
 
-RETURN;
+return 'success';
 
 end;
 $BODY$
@@ -274,13 +274,19 @@ ALTER FUNCTION arch.archive_records(integer) SET search_path=public,arch;
 COMMENT ON FUNCTION arch.archive_records(integer) IS 'input: number of days after which the message is to be archived, minimum is 7.';
 
 CREATE OR REPLACE FUNCTION arch.rebuildIndexes()
-  RETURNS void AS
-$BODY$reindex table message;
-reindex table external_call;
-reindex table request;
-reindex table response;$BODY$
-  LANGUAGE sql VOLATILE
+  RETURNS text AS
+$BODY$
+BEGIN
+  reindex table message;
+  reindex table external_call;
+  reindex table request;
+  reindex table response;
+  return 'success';
+END
+$BODY$
+  LANGUAGE plpgsql VOLATILE
   COST 100;
+
 ALTER FUNCTION arch.rebuildIndexes() SET default_tablespace='cbssesb';
 
 ALTER FUNCTION arch.rebuildIndexes() SET search_path=cbssesb, pg_catalog;
