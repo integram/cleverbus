@@ -40,7 +40,7 @@ public class CamelStopOnCompletionTest extends CamelTestSupport {
     @Test
     public void testStopOnCompletion() throws InterruptedException {
         MockEndpoint mock = getMockEndpoint("mock:test");
-        mock.expectedMessageCount(0);
+        mock.expectedMessageCount(2);
 
         String result = producer.requestBody("direct:routeONE", "any body", String.class);
         assertEquals("any body-routeONE-routeTWO", result);
@@ -54,13 +54,13 @@ public class CamelStopOnCompletionTest extends CamelTestSupport {
         return new RouteBuilder() {
             @Override
             public void configure() throws Exception {
-                onCompletion().parallelProcessing()
+                onCompletion()
                         .transform(body().append("-OnCompletion"))
                         .log(LoggingLevel.WARN, "OnCompletion")
                         .to("mock:test");
 
                 from("direct:routeONE")
-                    .onCompletion().parallelProcessing()
+                    .onCompletion()
                         .transform(body().append("-OnCompletionInRoute"))
                         .log(LoggingLevel.WARN, "OnCompletionInRoute")
                         .to("mock:test")
@@ -106,7 +106,7 @@ public class CamelStopOnCompletionTest extends CamelTestSupport {
                         .log(LoggingLevel.WARN, "entered finally");
 
                 from("direct:routeTWO")
-                    .onCompletion().parallelProcessing()
+                    .onCompletion()
                         .transform(body().append("-OnCompletionInRoute2"))
                         .log(LoggingLevel.WARN, "OnCompletionInRoute2")
                         .to("mock:test")
