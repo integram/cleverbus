@@ -17,10 +17,12 @@
 package org.cleverbus.core.common.asynch.notification;
 
 import org.cleverbus.api.common.EmailService;
+import org.cleverbus.api.common.email.Email;
 import org.cleverbus.common.Strings;
 import org.cleverbus.common.log.Log;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.Assert;
 
 
 /**
@@ -50,5 +52,12 @@ public class DummyEmailServiceImpl implements EmailService {
                 + "\nrecipients: " + recipients
                 + "\nsubject: " + subject
                 + "\nbody: " + Strings.fm(body, values));
+    }
+
+    @Override
+    public void sendEmail(final Email email) {
+        Assert.notNull(email, "email can not be null");
+
+        Log.debug("Sending email: " + email.toString());
     }
 }
