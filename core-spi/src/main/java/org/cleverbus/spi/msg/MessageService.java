@@ -46,6 +46,13 @@ public interface MessageService {
     public static final String BEAN = "messageService";
 
     /**
+     * Inserts new message.
+     *
+     * @param message message that will be saved
+     */
+    void insertMessage(Message message);
+
+    /**
      * Inserts new messages.
      *
      * @param messages the collection of message

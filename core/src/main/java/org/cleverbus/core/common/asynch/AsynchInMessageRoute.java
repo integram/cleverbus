@@ -96,6 +96,9 @@ public class AsynchInMessageRoute extends AbstractBasicRoute {
     @Autowired
     private ThrottlingProcessor throttlingProcessor;
 
+    @Autowired
+    private MessageService messageService;
+
     // list of validator for trace identifier is not mandatory
     @Autowired(required = false)
     private List<TraceIdentifierValidator> validatorList;
@@ -149,7 +152,9 @@ public class AsynchInMessageRoute extends AbstractBasicRoute {
                 }).id("throttleProcess")
 
                 // save it to DB
-                .to("jpa:" + Message.class.getName() + "?usePersist=true&persistenceUnit=" + DbConst.UNIT_NAME)
+                .beanRef(ROUTE_BEAN, "insertMessage")
+                //todo (cermak) in load causes a blockage, find out why and after resolving use it again
+//              .to("jpa:" + Message.class.getName() + "?usePersist=true&persistenceUnit=" + DbConst.UNIT_NAME)
 
                 // check guaranteed order
 //                .to(ExchangePattern.InOnly, URI_GUARANTEED_ORDER_ROUTE)
@@ -243,6 +248,22 @@ public class AsynchInMessageRoute extends AbstractBasicRoute {
                         // nothing to do - it's because correct running unit tests
                     }
                 });
+    }
+
+    /**
+     * Insert new message into database.
+     *
+     * @param msg message that will be saved
+     * @return saved message
+     */
+    @Handler
+    public Message insertMessage(@Body final Message msg) {
+        Assert.notNull(msg, "msg can not be null");
+
+        Log.debug("Insert new asynch message '" + msg.toHumanString() + "'.");
+
+        messageService.insertMessage(msg);
+        return msg;
     }
 
     /**
