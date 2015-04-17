@@ -6,7 +6,7 @@
     <groupId>org.cleverbus</groupId>
     <artifactId>cleverbus-integration</artifactId>
     <packaging>pom</packaging>
-    <version>2.0.1-SNAPSHOT</version>
+    <version>2.0.1</version>
 
     <name>CleverBus Root</name>
     <description>CleverBus integration framework</description>
@@ -38,6 +38,7 @@
         <connection>scm:git:https://repo.cleverlance.com/git/org.cleverbus.integration</connection>
         <developerConnection>scm:git:https://repo.cleverlance.com/git/org.cleverbus.integration</developerConnection>
         <url>https://repo.cleverlance.com/git/org.cleverbus.integration</url>
+    <tag>cleverbus-integration-2.0.1</tag>
   </scm>
 
     <distributionManagement>
