@@ -27,4 +27,6 @@
     <!-- file repository -->
     <bean id="fileRepository" class="org.cleverbus.core.common.file.DefaultFileRepository"/>
 
+    <!-- converter -->
+    <bean id="removeStaxConverter" class="org.cleverbus.core.common.converter.RemoveStAXConverters"/>
 </beans>
