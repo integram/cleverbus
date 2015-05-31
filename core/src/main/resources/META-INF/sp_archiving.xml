@@ -9,4 +9,7 @@
 
     <bean id="archivingDatabaseScriptJob"
           class="org.cleverbus.core.archiving.db.ArchivingDatabaseScriptJob"/>
+
+    <bean id="archivingMaxItemsDatabaseScriptJob"
+          class="org.cleverbus.core.archiving.db.ArchivingMaxItemsDatabaseScriptJob"/>
 </beans>
