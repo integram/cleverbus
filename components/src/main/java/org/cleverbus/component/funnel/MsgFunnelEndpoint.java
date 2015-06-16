@@ -16,6 +16,7 @@
 
 package org.cleverbus.component.funnel;
 
+import org.cleverbus.api.entity.Message;
 import org.cleverbus.api.entity.MsgStateEnum;
 import org.cleverbus.spi.AsyncEventNotifier;
 import org.cleverbus.spi.msg.MessageService;
@@ -25,6 +26,8 @@ import org.apache.camel.Consumer;
 import org.apache.camel.Processor;
 import org.apache.camel.Producer;
 import org.apache.camel.impl.DefaultEndpoint;
+
+import javax.annotation.Nullable;
 
 
 /**
@@ -63,6 +66,15 @@ public class MsgFunnelEndpoint extends DefaultEndpoint {
      * Funnel component identifier.
      */
     private String id;
+
+    /**
+     * Funnel value.
+     * <p>
+     * If this funnelValue is blank, then will be used funnelValue on {@link Message}
+     * ({@link Message#getFunnelValue()}).
+     * </p>
+     */
+    private String funnelValue;
 
     /**
      * Creates new endpoint.
@@ -151,5 +163,24 @@ public class MsgFunnelEndpoint extends DefaultEndpoint {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    /**
+     * Gets funnel value.
+     *
+     * @return funnel value, {@code NULL} - no funnel value (funnelValue on {@link Message} will be used)
+     */
+    @Nullable
+    public String getFunnelValue() {
+        return funnelValue;
+    }
+
+    /**
+     * Sets funnel value.
+     *
+     * @param funnelValue funnel value, {@code NULL} - no funnel value (funnelValue on {@link Message} will be used)
+     */
+    public void setFunnelValue(@Nullable String funnelValue) {
+        this.funnelValue = funnelValue;
     }
 }

@@ -16,24 +16,20 @@
 
 package org.cleverbus.spi.msg;
 
-import static org.cleverbus.api.asynch.AsynchConstants.CUSTOM_DATA_PROP;
-import static org.cleverbus.api.asynch.AsynchConstants.EXCEPTION_ERROR_CODE;
-import static org.cleverbus.api.asynch.AsynchConstants.MSG_HEADER;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
+import org.apache.camel.Header;
+import org.apache.camel.Properties;
+import org.apache.camel.Property;
 import org.cleverbus.api.entity.ExternalSystemExtEnum;
 import org.cleverbus.api.entity.Message;
 import org.cleverbus.api.entity.MsgStateEnum;
 import org.cleverbus.api.exception.ErrorExtEnum;
 
-import org.apache.camel.Header;
-import org.apache.camel.Properties;
-import org.apache.camel.Property;
+import javax.annotation.Nullable;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
+import static org.cleverbus.api.asynch.AsynchConstants.*;
 
 
 /**
@@ -234,4 +230,21 @@ public interface MessageService {
      * @param funnelCompId the funnel component ID
      */
     void setFunnelComponentId(Message msg, String funnelCompId);
+
+    /**
+     * Sets funnel value to specified message.
+     *
+     * @param msg         the message
+     * @param funnelValue the funnel value
+     */
+    void setFunnelValue(Message msg, String funnelValue);
+
+    /**
+     * Sets funnel component identifier and funnel value to specified message.
+     *
+     * @param msg          the message
+     * @param funnelCompId the funnel component ID
+     * @param funnelValue  the funnel value
+     */
+    void setFunnelComponentIdAndValue(Message msg, String funnelCompId, String funnelValue);
 }

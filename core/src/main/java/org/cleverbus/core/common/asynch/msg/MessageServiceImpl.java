@@ -16,14 +16,8 @@
 
 package org.cleverbus.core.common.asynch.msg;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.cleverbus.api.entity.ExternalSystemExtEnum;
 import org.cleverbus.api.entity.Message;
 import org.cleverbus.api.entity.MsgStateEnum;
@@ -32,12 +26,12 @@ import org.cleverbus.common.log.Log;
 import org.cleverbus.core.common.dao.MessageDao;
 import org.cleverbus.core.common.exception.ExceptionTranslator;
 import org.cleverbus.spi.msg.MessageService;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
+
+import javax.annotation.Nullable;
+import java.util.*;
 
 
 /**
@@ -395,5 +389,42 @@ public class MessageServiceImpl implements MessageService {
         messageDao.update(msg);
 
         Log.debug("Sets funnel ID of the message " + msg.toHumanString() + " to value: " + funnelCompId);
+    }
+
+    @Transactional
+    @Override
+    public void setFunnelValue(Message msg, String funnelValue) {
+        Assert.notNull(msg, "the msg must not be null");
+        Assert.hasText(funnelValue, "the funnelValue must not be empty");
+
+        Assert.isTrue(msg.getState().equals(MsgStateEnum.PROCESSING),
+                "the message must be in PROCESSING state, but state is " + msg.getState());
+
+        msg.setFunnelValue(funnelValue);
+        msg.setLastUpdateTimestamp(new Date());
+
+        messageDao.update(msg);
+
+        Log.debug("Sets funnel value of the message " + msg.toHumanString() + " to value: " + funnelValue);
+    }
+
+    @Transactional
+    @Override
+    public void setFunnelComponentIdAndValue(Message msg, String funnelCompId, String funnelValue) {
+        Assert.notNull(msg, "the msg must not be null");
+        Assert.hasText(funnelCompId, "the funnelCompId must not be empty");
+        Assert.hasText(funnelValue, "the funnelValue must not be empty");
+
+        Assert.isTrue(msg.getState().equals(MsgStateEnum.PROCESSING),
+                "the message must be in PROCESSING state, but state is " + msg.getState());
+
+        msg.setFunnelComponentId(funnelCompId);
+        msg.setFunnelValue(funnelValue);
+        msg.setLastUpdateTimestamp(new Date());
+
+        messageDao.update(msg);
+
+        Log.debug("Sets funnel ID of the message " + msg.toHumanString() + " to value: " + funnelCompId
+                + " and funnel value to: " + funnelValue);
     }
 }
