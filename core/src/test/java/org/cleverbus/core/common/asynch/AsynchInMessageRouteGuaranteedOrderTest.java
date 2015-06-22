@@ -16,11 +16,12 @@
 
 package org.cleverbus.core.common.asynch;
 
-import static org.apache.camel.component.mock.MockEndpoint.assertIsSatisfied;
-
-import java.util.Date;
-import java.util.UUID;
-
+import org.apache.camel.EndpointInject;
+import org.apache.camel.Produce;
+import org.apache.camel.ProducerTemplate;
+import org.apache.camel.builder.AdviceWithRouteBuilder;
+import org.apache.camel.component.mock.MockEndpoint;
+import org.apache.commons.lang.time.DateUtils;
 import org.cleverbus.api.asynch.AsynchConstants;
 import org.cleverbus.api.entity.Message;
 import org.cleverbus.api.entity.MsgStateEnum;
@@ -29,18 +30,18 @@ import org.cleverbus.test.ActiveRoutes;
 import org.cleverbus.test.EntityTypeTestEnum;
 import org.cleverbus.test.ExternalSystemTestEnum;
 import org.cleverbus.test.ServiceTestEnum;
-
-import org.apache.camel.EndpointInject;
-import org.apache.camel.Produce;
-import org.apache.camel.ProducerTemplate;
-import org.apache.camel.builder.AdviceWithRouteBuilder;
-import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.commons.lang.time.DateUtils;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.transaction.annotation.Transactional;
+
+import javax.annotation.Nullable;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.UUID;
+
+import static org.apache.camel.component.mock.MockEndpoint.assertIsSatisfied;
 
 
 /**
@@ -60,11 +61,15 @@ public class AsynchInMessageRouteGuaranteedOrderTest extends AbstractCoreDbTest 
 
     private static final String FUNNEL_VALUE = "774724557";
 
+    private static final String FUNNEL_VALUE_TWO = "FUNNEL_VALUE_TWO";
+
+    private static final String FUNNEL_VALUE_THREE = "FUNNEL_VALUE_THREE";
+
     private Message firstMsg;
 
     @Before
     public void prepareMessage() throws Exception {
-        firstMsg = createMessage(FUNNEL_VALUE);
+        firstMsg = createMessage(FUNNEL_VALUE, FUNNEL_VALUE_THREE);
         firstMsg.setGuaranteedOrder(true);
 
         em.persist(firstMsg);
@@ -82,7 +87,7 @@ public class AsynchInMessageRouteGuaranteedOrderTest extends AbstractCoreDbTest 
                 });
     }
 
-    private Message createMessage(String funnelValue) {
+    private Message createMessage(@Nullable String... funnelValue) {
         Date currDate = new Date();
 
         Message msg = new Message();
@@ -99,7 +104,9 @@ public class AsynchInMessageRouteGuaranteedOrderTest extends AbstractCoreDbTest 
         msg.setLastUpdateTimestamp(currDate);
         msg.setObjectId("objectID");
         msg.setEntityType(EntityTypeTestEnum.ACCOUNT);
-        msg.setFunnelValue(funnelValue); //=MSISDN
+        if (funnelValue != null && funnelValue.length != 0) {
+            msg.setFunnelValues(Arrays.asList(funnelValue));
+        }
 
         return msg;
     }
@@ -172,5 +179,94 @@ public class AsynchInMessageRouteGuaranteedOrderTest extends AbstractCoreDbTest 
         assertIsSatisfied(mock);
 
         Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+    }
+
+    @Test
+    public void testGuaranteedOrder_firstMultiFunnelMessage() throws Exception {
+        mock.setExpectedMessageCount(1);
+
+        Message msg = createMessage(FUNNEL_VALUE, FUNNEL_VALUE_TWO);
+        msg.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), -100)); // be before "first" message
+        msg.setState(MsgStateEnum.PROCESSING);
+        msg.setGuaranteedOrder(true);
+        em.persist(msg);
+        em.flush();
+
+        // send message has "msgTimestamp" before another processing message
+        producer.sendBodyAndHeader(msg, AsynchConstants.MSG_HEADER, msg);
+
+        assertIsSatisfied(mock);
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.PROCESSING));
+    }
+
+    @Test
+    public void testGuaranteedOrder_postponeMultiFunnelMessage() throws Exception {
+        Message msg = createMessage(FUNNEL_VALUE, FUNNEL_VALUE_TWO);
+        msg.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), 100)); // be after "first" message
+        msg.setState(MsgStateEnum.PROCESSING);
+        msg.setGuaranteedOrder(true);
+        em.persist(msg);
+        em.flush();
+
+        mock.setExpectedMessageCount(1);
+
+        // send message has "msgTimestamp" after another processing message => postpone it
+        producer.sendBodyAndHeader(msg, AsynchConstants.MSG_HEADER, msg);
+
+        assertIsSatisfied(mock);
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+
+        msg = createMessage(FUNNEL_VALUE);
+        msg.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), 200)); // be after "first" message
+        msg.setState(MsgStateEnum.PROCESSING);
+        msg.setGuaranteedOrder(true);
+        em.persist(msg);
+        em.flush();
+
+        mock.setExpectedMessageCount(2);
+
+        // send message has "msgTimestamp" after another processing message => postpone it
+        producer.sendBodyAndHeader(msg, AsynchConstants.MSG_HEADER, msg);
+
+        assertIsSatisfied(mock);
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+
+        msg = createMessage(FUNNEL_VALUE_THREE);
+        msg.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), 300)); // be after "first" message
+        msg.setState(MsgStateEnum.PROCESSING);
+        msg.setGuaranteedOrder(true);
+        em.persist(msg);
+        em.flush();
+
+        mock.setExpectedMessageCount(3);
+
+        // send message has "msgTimestamp" after another processing message => postpone it
+        producer.sendBodyAndHeader(msg, AsynchConstants.MSG_HEADER, msg);
+
+        assertIsSatisfied(mock);
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+    }
+
+    @Test
+    public void testGuaranteedOrder_proccesingMultiFunnelMessage() throws Exception {
+        mock.setExpectedMessageCount(1);
+
+        Message msg = createMessage(FUNNEL_VALUE_TWO);
+        msg.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), 100)); // be after "first" message
+        msg.setState(MsgStateEnum.PROCESSING);
+        msg.setGuaranteedOrder(true);
+        em.persist(msg);
+        em.flush();
+
+        // send message has "msgTimestamp" after another processing message => postpone it
+        producer.sendBodyAndHeader(msg, AsynchConstants.MSG_HEADER, msg);
+
+        assertIsSatisfied(mock);
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.PROCESSING));
     }
 }

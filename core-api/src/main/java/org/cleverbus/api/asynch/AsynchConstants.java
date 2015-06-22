@@ -82,7 +82,7 @@ public final class AsynchConstants {
     public static final String OBJECT_ID_HEADER = "asynchObjectId";
 
     /**
-     * Header value that holds funnel value of the message.
+     * Header value that holds only one funnel value of the message.
      * <p/>
      * Funnel value serves for filtering messages in the route where should be only one processing message
      * with same funnel value.
@@ -90,9 +90,25 @@ public final class AsynchConstants {
     public static final String FUNNEL_VALUE_HEADER = "asynchFunnelValue";
 
     /**
+     * Header value that holds all funnel values of the message.
+     * <p>
+     * As value it must be used {@code Collection<String>}.
+     * </p>
+     * <p>
+     * Between all funnel values of message is OR condition.
+     * </p>
+     * <p>
+     * Funnel value serves for filtering messages in the route where should be only one processing message
+     * with same funnel value.
+     * </p>
+     */
+    public static final String FUNNEL_VALUES_HEADER = "asynchFunnelValues";
+
+    /**
      * Header value that holds flag (true/false) if route should be processed in guaranteed order or not.
      *
      * @see #FUNNEL_VALUE_HEADER
+     * @see #FUNNEL_VALUES_HEADER
      * @see #EXCLUDE_FAILED_HEADER
      */
     public static final String GUARANTEED_ORDER_HEADER = "guaranteedOrderValue";

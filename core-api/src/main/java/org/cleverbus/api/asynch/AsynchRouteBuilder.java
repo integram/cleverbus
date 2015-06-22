@@ -16,25 +16,29 @@
 
 package org.cleverbus.api.asynch;
 
-import static org.apache.camel.builder.Builder.constant;
-import static org.cleverbus.common.jaxb.JaxbDataFormatHelper.jaxb;
-
-import javax.annotation.Nullable;
-
-import org.cleverbus.api.asynch.model.AsynchResponse;
-import org.cleverbus.api.asynch.model.CallbackResponse;
-import org.cleverbus.api.entity.Message;
-import org.cleverbus.api.entity.ServiceExtEnum;
-import org.cleverbus.api.route.AbstractBasicRoute;
-import org.cleverbus.api.route.XPathValidator;
-
 import org.apache.camel.Expression;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.DataFormatDefinition;
 import org.apache.camel.model.RouteDefinition;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.builder.ToStringBuilder;
+import org.cleverbus.api.asynch.model.AsynchResponse;
+import org.cleverbus.api.asynch.model.CallbackResponse;
+import org.cleverbus.api.entity.Funnel;
+import org.cleverbus.api.entity.Message;
+import org.cleverbus.api.entity.ServiceExtEnum;
+import org.cleverbus.api.route.AbstractBasicRoute;
+import org.cleverbus.api.route.XPathValidator;
+import org.cleverbus.common.expression.MultiValueExpression;
 import org.springframework.util.Assert;
+
+import javax.annotation.Nullable;
+import java.util.Arrays;
+import java.util.Collection;
+
+import static org.apache.camel.builder.Builder.constant;
+import static org.cleverbus.common.jaxb.JaxbDataFormatHelper.jaxb;
 
 
 /**
@@ -55,7 +59,7 @@ public final class AsynchRouteBuilder {
     private @Nullable String routeId;
     private @Nullable Processor[] validators;
     private @Nullable Expression objectIdExpr;
-    private @Nullable Expression funnelValue;
+    private @Nullable Collection<Expression> funnelValues;
     private boolean guaranteedOrder;
     private boolean excludeFailedState;
     private AsynchResponseProcessor responseProcessor;
@@ -128,10 +132,27 @@ public final class AsynchRouteBuilder {
      * Sets funnel value.
      *
      * @param funnelValue the funnel value
-     * @see Message#getFunnelValue()
+     * @see Funnel
      */
     public AsynchRouteBuilder withFunnelValue(@Nullable Expression funnelValue) {
-        this.funnelValue = funnelValue;
+        if (funnelValue == null){
+            return this;
+        }else {
+            return withFunnelValues(funnelValue);
+        }
+    }
+
+    /**
+     * Sets funnel values.
+     * Between all funnel values is OR condition.
+     *
+     * @param funnelValues the funnel values
+     * @see Funnel
+     */
+    public AsynchRouteBuilder withFunnelValues(Expression... funnelValues){
+        if (funnelValues != null && funnelValues.length != 0){
+            this.funnelValues = Arrays.asList(funnelValues);
+        }
         return this;
     }
 
@@ -207,8 +228,8 @@ public final class AsynchRouteBuilder {
     }
 
     @Nullable
-    public Expression getFunnelValue() {
-        return funnelValue;
+    public Collection<Expression> getFunnelValues() {
+        return funnelValues;
     }
 
     @Nullable
@@ -236,7 +257,7 @@ public final class AsynchRouteBuilder {
         Assert.notNull(route, "the route must not be null");
 
         // check guaranteed order - funnel value must be filled
-        if (guaranteedOrder && funnelValue == null) {
+        if (guaranteedOrder && CollectionUtils.isEmpty(funnelValues)) {
             throw new IllegalStateException("There is no funnel value for guaranteed order.");
         }
 
@@ -261,8 +282,9 @@ public final class AsynchRouteBuilder {
             routeDefinition.setHeader(AsynchConstants.OBJECT_ID_HEADER, objectIdExpr);
         }
 
-        if (funnelValue != null) {
-            routeDefinition.setHeader(AsynchConstants.FUNNEL_VALUE_HEADER, funnelValue);
+        if (!CollectionUtils.isEmpty(funnelValues)) {
+            routeDefinition.setHeader(AsynchConstants.FUNNEL_VALUES_HEADER,
+                    new MultiValueExpression(funnelValues, false));
         }
 
         if (guaranteedOrder) {
@@ -315,7 +337,7 @@ public final class AsynchRouteBuilder {
             .append("operation", operation)
             .append("policyRef", policyRef)
             .append("objectId", objectIdExpr)
-            .append("funnelValue", funnelValue)
+            .append("funnelValues", funnelValues)
             .toString();
     }
 }

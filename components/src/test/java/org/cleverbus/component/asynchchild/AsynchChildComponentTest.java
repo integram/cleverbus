@@ -16,14 +16,12 @@
 
 package org.cleverbus.component.asynchchild;
 
-import static org.hamcrest.CoreMatchers.endsWith;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertThat;
-
-import java.util.Date;
-
+import org.apache.camel.EndpointInject;
+import org.apache.camel.Produce;
+import org.apache.camel.ProducerTemplate;
+import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.mock.MockEndpoint;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.cleverbus.api.asynch.AsynchConstants;
 import org.cleverbus.api.entity.BindingTypeEnum;
 import org.cleverbus.api.entity.Message;
@@ -33,16 +31,15 @@ import org.cleverbus.component.AbstractComponentsDbTest;
 import org.cleverbus.test.EntityTypeTestEnum;
 import org.cleverbus.test.ExternalSystemTestEnum;
 import org.cleverbus.test.ServiceTestEnum;
-
-import org.apache.camel.EndpointInject;
-import org.apache.camel.Produce;
-import org.apache.camel.ProducerTemplate;
-import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.commons.lang.exception.ExceptionUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Date;
+
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 
 /**
@@ -137,7 +134,7 @@ public class AsynchChildComponentTest extends AbstractComponentsDbTest {
         assertThat(asynchMsg.getService().getServiceName(), is("customer"));
         assertThat(asynchMsg.getOperationName(), is("createCustomer"));
         assertThat(asynchMsg.getObjectId(), is("111"));
-        assertThat(asynchMsg.getFunnelValue(), is("val"));
+        assertTrue(asynchMsg.getFunnelValues().contains("val"));
 
         Message msgDB = em.find(Message.class, asynchMsg.getMsgId());
         assertThat(msgDB, notNullValue());

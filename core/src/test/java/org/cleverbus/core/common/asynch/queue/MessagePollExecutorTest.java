@@ -20,6 +20,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -59,6 +60,8 @@ public class MessagePollExecutorTest extends AbstractCoreDbTest {
 
     private static final String FUNNEL_VALUE = "774724557";
 
+    private static final String FUNNEL_VALUE_TWO = "FUNNEL_VALUE_TWO";
+
     @EndpointInject(uri = "mock:test")
     private MockEndpoint mock;
 
@@ -81,15 +84,15 @@ public class MessagePollExecutorTest extends AbstractCoreDbTest {
         txTemplate.execute(new TransactionCallbackWithoutResult() {
             @Override
             protected void doInTransactionWithoutResult(TransactionStatus status) {
-                insertNewMessage("1234_4567", MsgStateEnum.POSTPONED, null, false);
-                insertNewMessage("1234_4567_8", MsgStateEnum.PARTLY_FAILED, FUNNEL_VALUE, false);
-                insertNewMessage("1234_4567_9", MsgStateEnum.PARTLY_FAILED, "somethingElse", false);
+                insertNewMessage("1234_4567", MsgStateEnum.POSTPONED, false);
+                insertNewMessage("1234_4567_8", MsgStateEnum.PARTLY_FAILED, false, FUNNEL_VALUE);
+                insertNewMessage("1234_4567_9", MsgStateEnum.PARTLY_FAILED, false, "somethingElse");
             }
         });
     }
 
-    private Message insertNewMessage(String correlationId, MsgStateEnum state, @Nullable String funnelValue,
-            boolean guaranteedOrder) {
+    private Message insertNewMessage(String correlationId, MsgStateEnum state,
+            boolean guaranteedOrder, @Nullable String... funnelValues) {
         Date currDate = new Date();
 
         Message msg = new Message();
@@ -104,7 +107,9 @@ public class MessagePollExecutorTest extends AbstractCoreDbTest {
         msg.setService(ServiceTestEnum.CUSTOMER);
         msg.setOperationName("setCustomer");
         msg.setObjectId(null);
-        msg.setFunnelValue(funnelValue);
+        if (funnelValues != null && funnelValues.length != 0) {
+            msg.setFunnelValues(Arrays.asList(funnelValues));
+        }
         msg.setGuaranteedOrder(guaranteedOrder);
 
         msg.setPayload("xml");
@@ -180,8 +185,8 @@ public class MessagePollExecutorTest extends AbstractCoreDbTest {
     @Transactional
     public void testGuaranteedOrder_postponedMessage() throws InterruptedException {
         // prepare message that should be postponed
-        insertNewMessage("id1", MsgStateEnum.PROCESSING, FUNNEL_VALUE, true);
-        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, FUNNEL_VALUE, true);
+        insertNewMessage("id1", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE);
+        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE);
         msg.setReceiveTimestamp(DateUtils.addSeconds(new Date(), 10));  //postponedIntervalWhenFailed=0
 
         // action
@@ -194,7 +199,7 @@ public class MessagePollExecutorTest extends AbstractCoreDbTest {
     @Transactional
     public void testGuaranteedOrder_processing_onlyOneMessage() throws InterruptedException {
         // prepare only one message => continue processing
-        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, FUNNEL_VALUE, true);
+        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE);
 
         // action
         messagePollExecutor.startMessageProcessing(msg);
@@ -206,8 +211,8 @@ public class MessagePollExecutorTest extends AbstractCoreDbTest {
     @Transactional
     public void testGuaranteedOrder_processing_msgIsNotGuaranteed() throws InterruptedException {
         // prepare messages that is not guaranteed => continue processing
-        insertNewMessage("id1", MsgStateEnum.PROCESSING, FUNNEL_VALUE, false);
-        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, FUNNEL_VALUE, true);
+        insertNewMessage("id1", MsgStateEnum.PROCESSING, false, FUNNEL_VALUE);
+        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE);
 
         // action
         messagePollExecutor.startMessageProcessing(msg);
@@ -219,8 +224,8 @@ public class MessagePollExecutorTest extends AbstractCoreDbTest {
     @Transactional
     public void testGuaranteedOrder_processing_differentFunnelValues() throws InterruptedException {
         // prepare messages that is not guaranteed => continue processing
-        insertNewMessage("id1", MsgStateEnum.PROCESSING, "someValue", true);
-        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, FUNNEL_VALUE, true);
+        insertNewMessage("id1", MsgStateEnum.PROCESSING, true, "someValue");
+        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE);
 
         // action
         messagePollExecutor.startMessageProcessing(msg);
@@ -232,13 +237,57 @@ public class MessagePollExecutorTest extends AbstractCoreDbTest {
     @Transactional
     public void testGuaranteedOrder_failedMessage() throws InterruptedException {
         // prepare message that should fail
-        insertNewMessage("id1", MsgStateEnum.PROCESSING, FUNNEL_VALUE, true);
-        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, FUNNEL_VALUE, true);
+        insertNewMessage("id1", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE);
+        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE);
         msg.setReceiveTimestamp(DateUtils.addSeconds(new Date(), -10)); //postponedIntervalWhenFailed=0
 
         // action
         messagePollExecutor.startMessageProcessing(msg);
 
         Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.FAILED));
+    }
+
+    @Test
+    @Transactional
+    public void testGuaranteedOrder_multiFunnelMessage() throws InterruptedException {
+        // prepare message that should be postponed
+        insertNewMessage("id1", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE, FUNNEL_VALUE_TWO);
+
+        //first message
+        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE);
+        msg.setReceiveTimestamp(DateUtils.addSeconds(new Date(), 10));  //postponedIntervalWhenFailed=0
+
+        // action
+        messagePollExecutor.startMessageProcessing(msg);
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+
+        //second message
+        msg = insertNewMessage("id3", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE, FUNNEL_VALUE_TWO);
+        msg.setReceiveTimestamp(DateUtils.addSeconds(new Date(), 100));
+
+        // action
+        messagePollExecutor.startMessageProcessing(msg);
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+
+        //third message
+        msg = insertNewMessage("id4", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE_TWO);
+        msg.setReceiveTimestamp(DateUtils.addSeconds(new Date(), 200));
+
+        // action
+        messagePollExecutor.startMessageProcessing(msg);
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+
+        //fifth message
+        msg = insertNewMessage("id5", MsgStateEnum.PROCESSING, true, "someOtherValue", "someOtherValueTwo",
+                "someValue");
+        msg.setReceiveTimestamp(DateUtils.addSeconds(new Date(), 300));
+
+        // action
+        messagePollExecutor.startMessageProcessing(msg);
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.PROCESSING));
     }
 }

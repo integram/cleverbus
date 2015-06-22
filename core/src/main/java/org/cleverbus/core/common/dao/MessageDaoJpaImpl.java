@@ -16,26 +16,27 @@
 
 package org.cleverbus.core.common.dao;
 
-import java.sql.Timestamp;
-import java.util.Date;
-import java.util.List;
+import org.apache.commons.lang.time.DateUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.cleverbus.api.entity.ExternalSystemExtEnum;
+import org.cleverbus.api.entity.Message;
+import org.cleverbus.api.entity.MsgStateEnum;
+import org.cleverbus.api.exception.NoDataFoundException;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
 
 import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
-
-import org.cleverbus.api.entity.ExternalSystemExtEnum;
-import org.cleverbus.api.entity.Message;
-import org.cleverbus.api.entity.MsgStateEnum;
-import org.cleverbus.api.exception.NoDataFoundException;
-
-import org.apache.commons.lang.time.DateUtils;
-import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.Assert;
+import java.sql.Timestamp;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 
 
 /**
@@ -251,14 +252,25 @@ public class MessageDaoJpaImpl implements MessageDao {
     }
 
     @Override
-    public int getCountProcessingMessagesForFunnel(String funnelValue, int idleInterval, String funnelCompId) {
+    public int getCountProcessingMessagesForFunnel(Collection<String> funnelValues, int idleInterval,
+                                                   String funnelCompId) {
         String jSql = "SELECT COUNT(m) "
                 + "FROM " + Message.class.getName() + " m "
+                + "INNER JOIN m.funnels f "
                 + "WHERE (m.state = '" + MsgStateEnum.PROCESSING + "' "
                 + "         OR m.state = '" + MsgStateEnum.WAITING + "'"
                 + "         OR m.state = '" + MsgStateEnum.WAITING_FOR_RES + "')"
-                + "      AND m.funnelValue = '" + funnelValue + "'"
-                + "      AND m.startProcessTimestamp >= :startTime";
+                + "      AND m.startProcessTimestamp >= :startTime"
+                + "      AND m.funnelComponentId = '" + funnelCompId + "'"
+                + "      AND (";
+
+        for (String funnelValue : funnelValues){
+            jSql += "f.funnelValue = '" + funnelValue + "' OR ";
+        }
+        //remove last or
+        jSql = StringUtils.substringBeforeLast(jSql, " OR ");
+
+        jSql += ")";
 
         TypedQuery<Number> q = em.createQuery(jSql, Number.class);
         q.setParameter("startTime", new Timestamp(DateUtils.addSeconds(new Date(), -idleInterval).getTime()));
@@ -267,56 +279,85 @@ public class MessageDaoJpaImpl implements MessageDao {
     }
 
     @Override
-    public List<Message> getMessagesForGuaranteedOrderForRoute(String funnelValue, boolean excludeFailedState) {
-        //TODO (juza) limit select to specific number of items + add msgId DESC to sorting (parent vs. child)
-        String jSql = "SELECT m "
-                + "FROM " + Message.class.getName() + " m "
-                + "WHERE (m.state = '" + MsgStateEnum.PROCESSING + "' "
-                + "         OR m.state = '" + MsgStateEnum.WAITING + "'"
-                + "         OR m.state = '" + MsgStateEnum.PARTLY_FAILED + "'"
-                + "         OR m.state = '" + MsgStateEnum.POSTPONED + "'";
+    public List<Message> getMessagesForGuaranteedOrderForRoute(Collection<String> funnelValues,
+                                                               boolean excludeFailedState) {
+        Assert.notNull(funnelValues, "funnelValues must not be null");
 
-        if (!excludeFailedState) {
-            jSql += "         OR m.state = '" + MsgStateEnum.FAILED + "'";
+        if (funnelValues.isEmpty()){
+            return Collections.emptyList();
+        }else {
+            //TODO (juza) limit select to specific number of items + add msgId DESC to sorting (parent vs. child)
+            String jSql = "SELECT m "
+                    + "FROM " + Message.class.getName() + " m "
+                    + "INNER JOIN m.funnels f "
+                    + "WHERE (m.state = '" + MsgStateEnum.PROCESSING + "' "
+                    + "         OR m.state = '" + MsgStateEnum.WAITING + "'"
+                    + "         OR m.state = '" + MsgStateEnum.PARTLY_FAILED + "'"
+                    + "         OR m.state = '" + MsgStateEnum.POSTPONED + "'";
+
+            if (!excludeFailedState) {
+                jSql += "         OR m.state = '" + MsgStateEnum.FAILED + "'";
+            }
+
+            jSql += "         OR m.state = '" + MsgStateEnum.WAITING_FOR_RES + "')"
+                    + "      AND m.guaranteedOrder is true"
+                    + "      AND (";
+
+            for (String funnelValue : funnelValues){
+                jSql += "f.funnelValue = '" + funnelValue + "' OR ";
+            }
+            //remove last or
+            jSql = StringUtils.substringBeforeLast(jSql, " OR ");
+
+            jSql += ") ORDER BY m.msgTimestamp";
+
+            TypedQuery<Message> q = em.createQuery(jSql, Message.class);
+
+            return q.getResultList();
         }
-
-        jSql += "         OR m.state = '" + MsgStateEnum.WAITING_FOR_RES + "')"
-                + "      AND m.funnelValue = '" + funnelValue + "'"
-                + "      AND m.guaranteedOrder is true"
-                + " ORDER BY m.msgTimestamp";
-
-        TypedQuery<Message> q = em.createQuery(jSql, Message.class);
-
-        return q.getResultList();
     }
 
     @Override
-    public List<Message> getMessagesForGuaranteedOrderForFunnel(String funnelValue, int idleInterval,
+    public List<Message> getMessagesForGuaranteedOrderForFunnel(Collection<String> funnelValues, int idleInterval,
             boolean excludeFailedState, String funnelCompId) {
+        Assert.notNull(funnelValues, "funnelValues must not be null");
+        Assert.hasText(funnelCompId, "funnelCompId must not be empty");
 
-        String jSql = "SELECT m "
-                + "FROM " + Message.class.getName() + " m "
-                + "WHERE (m.state = '" + MsgStateEnum.PROCESSING + "' "
-                + "         OR m.state = '" + MsgStateEnum.WAITING + "'"
-                + "         OR m.state = '" + MsgStateEnum.PARTLY_FAILED + "'"
-                + "         OR m.state = '" + MsgStateEnum.POSTPONED + "'";
+        if (funnelValues.isEmpty()){
+            return Collections.emptyList();
+        }else {
+            String jSql = "SELECT m "
+                    + "FROM " + Message.class.getName() + " m "
+                    + "INNER JOIN m.funnels f "
+                    + "WHERE (m.state = '" + MsgStateEnum.PROCESSING + "' "
+                    + "         OR m.state = '" + MsgStateEnum.WAITING + "'"
+                    + "         OR m.state = '" + MsgStateEnum.PARTLY_FAILED + "'"
+                    + "         OR m.state = '" + MsgStateEnum.POSTPONED + "'";
 
-        if (!excludeFailedState) {
-            jSql += "         OR m.state = '" + MsgStateEnum.FAILED + "'";
+            if (!excludeFailedState) {
+                jSql += "         OR m.state = '" + MsgStateEnum.FAILED + "'";
+            }
+
+            jSql += "         OR m.state = '" + MsgStateEnum.WAITING_FOR_RES + "')"
+                    + "      AND m.funnelComponentId = '" + funnelCompId + "'"
+                    + "      AND m.startProcessTimestamp >= :startTime"
+                    + "      AND (";
+
+            for (String funnelValue : funnelValues) {
+                jSql += "f.funnelValue = '" + funnelValue + "' OR ";
+            }
+            //remove last or
+            jSql = StringUtils.substringBeforeLast(jSql, " OR ");
+
+            jSql += ") ORDER BY m.msgTimestamp";
+
+            //TODO (juza) limit select to specific number of items + add msgId DESC to sorting (parent vs. child)
+
+            TypedQuery<Message> q = em.createQuery(jSql, Message.class);
+            q.setParameter("startTime", new Timestamp(DateUtils.addSeconds(new Date(), -idleInterval).getTime()));
+
+            return q.getResultList();
         }
-
-        jSql += "         OR m.state = '" + MsgStateEnum.WAITING_FOR_RES + "')"
-                + "      AND m.funnelValue = '" + funnelValue + "'"
-                + "      AND m.funnelComponentId = '" + funnelCompId + "'"
-                + "      AND m.startProcessTimestamp >= :startTime"
-                + " ORDER BY m.msgTimestamp";
-
-        //TODO (juza) limit select to specific number of items + add msgId DESC to sorting (parent vs. child)
-
-        TypedQuery<Message> q = em.createQuery(jSql, Message.class);
-        q.setParameter("startTime", new Timestamp(DateUtils.addSeconds(new Date(), -idleInterval).getTime()));
-
-        return q.getResultList();
     }
 
     @Override

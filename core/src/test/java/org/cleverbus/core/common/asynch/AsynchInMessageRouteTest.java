@@ -16,21 +16,10 @@
 
 package org.cleverbus.core.common.asynch;
 
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
-
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Date;
-import java.util.List;
-
-import javax.annotation.Nullable;
-
+import org.apache.camel.*;
+import org.apache.camel.builder.AdviceWithRouteBuilder;
+import org.apache.camel.component.mock.MockEndpoint;
+import org.apache.commons.lang.time.DateUtils;
 import org.cleverbus.api.asynch.AsynchConstants;
 import org.cleverbus.api.asynch.model.CallbackResponse;
 import org.cleverbus.api.asynch.model.ConfirmationTypes;
@@ -43,15 +32,6 @@ import org.cleverbus.core.AbstractCoreDbTest;
 import org.cleverbus.test.ActiveRoutes;
 import org.cleverbus.test.ExternalSystemTestEnum;
 import org.cleverbus.test.ServiceTestEnum;
-
-import org.apache.camel.CamelExecutionException;
-import org.apache.camel.EndpointInject;
-import org.apache.camel.Exchange;
-import org.apache.camel.Produce;
-import org.apache.camel.ProducerTemplate;
-import org.apache.camel.builder.AdviceWithRouteBuilder;
-import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.commons.lang.time.DateUtils;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Before;
@@ -59,6 +39,17 @@ import org.junit.Test;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.test.jdbc.JdbcTestUtils;
 import org.springframework.transaction.annotation.Transactional;
+
+import javax.annotation.Nullable;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 
 /**
@@ -69,7 +60,9 @@ import org.springframework.transaction.annotation.Transactional;
 @ActiveRoutes(classes = AsynchInMessageRoute.class)
 public class AsynchInMessageRouteTest extends AbstractCoreDbTest {
 
-    private static final String FUNNEL_VALUE = "774724557";
+    private static final String FUNNEL_VALUE_ONE = "774724557";
+
+    private static final String FUNNEL_VALUE_TWO = "FUNNEL_VALUE_TWO";
 
     @Produce(uri = AsynchConstants.URI_ASYNCH_IN_MSG)
     private ProducerTemplate producer;
@@ -134,7 +127,6 @@ public class AsynchInMessageRouteTest extends AbstractCoreDbTest {
                 assertThat(rs.getString("service"), is(ServiceTestEnum.CUSTOMER.getServiceName()));
                 assertThat(rs.getString("source_system"), is(ExternalSystemTestEnum.CRM.getSystemName()));
                 assertThat(MsgStateEnum.valueOf(rs.getString("state")), is(MsgStateEnum.PROCESSING));
-                assertThat(rs.getString("funnel_value"), nullValue());
                 assertThat(rs.getString("parent_binding_type"), nullValue());
                 assertThat(rs.getString("funnel_component_id"), nullValue());
                 assertThat(rs.getLong("parent_msg_id"), is(0L));
@@ -267,7 +259,7 @@ public class AsynchInMessageRouteTest extends AbstractCoreDbTest {
                 });
 
         // prepare message - only one message
-        Message msg = insertNewMessage("id1", MsgStateEnum.PROCESSING, FUNNEL_VALUE, true);
+        Message msg = insertNewMessage("id1", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE_ONE);
 
         mock.expectedMessageCount(1);
         guaranteedProducer.sendBody(msg);
@@ -276,7 +268,7 @@ public class AsynchInMessageRouteTest extends AbstractCoreDbTest {
         Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.PROCESSING));
 
         // prepare message - second message with different funnel value
-        msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, "some value", true);
+        msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, true, "some value");
 
         mock.expectedMessageCount(2);
         guaranteedProducer.sendBody(msg);
@@ -285,7 +277,7 @@ public class AsynchInMessageRouteTest extends AbstractCoreDbTest {
         Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.PROCESSING));
 
         // prepare message - third message that is not guaranteed
-        msg = insertNewMessage("id3", MsgStateEnum.PROCESSING, FUNNEL_VALUE, false);
+        msg = insertNewMessage("id3", MsgStateEnum.PROCESSING, false, FUNNEL_VALUE_ONE);
 
         mock.expectedMessageCount(3);
         guaranteedProducer.sendBody(msg);
@@ -298,9 +290,9 @@ public class AsynchInMessageRouteTest extends AbstractCoreDbTest {
     @Transactional
     public void testGuaranteedOrder_postponedMessage() throws InterruptedException {
         // prepare message that should be postponed
-        insertNewMessage("id1", MsgStateEnum.PROCESSING, FUNNEL_VALUE, true);
+        insertNewMessage("id1", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE_ONE);
 
-        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, FUNNEL_VALUE, true);
+        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE_ONE);
         msg.setReceiveTimestamp(DateUtils.addSeconds(new Date(), 10));
 
         // action
@@ -309,8 +301,104 @@ public class AsynchInMessageRouteTest extends AbstractCoreDbTest {
         Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
     }
 
-    private Message insertNewMessage(String correlationId, MsgStateEnum state, @Nullable String funnelValue,
-            boolean guaranteedOrder) {
+    @Test
+    @Transactional
+    public void testGuaranteedOrder_postponedMultiFunnelLastMessage() throws InterruptedException {
+        // prepare message that should be postponed
+        insertNewMessage("id1", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE_ONE);
+
+        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE_ONE, FUNNEL_VALUE_TWO);
+        msg.setReceiveTimestamp(DateUtils.addSeconds(new Date(), 10));
+
+        // action
+        guaranteedProducer.sendBody(msg);
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+    }
+
+    @Test
+    @Transactional
+    public void testGuaranteedOrder_postponedMultiFunnelFirstMessage() throws InterruptedException {
+        // prepare message that should be postponed
+        insertNewMessage("id1", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE_ONE, FUNNEL_VALUE_TWO);
+
+        Message msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE_ONE);
+        msg.setReceiveTimestamp(DateUtils.addSeconds(new Date(), 10));
+
+        // action
+        guaranteedProducer.sendBody(msg);
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+    }
+
+    @Test
+    @Transactional
+    public void testGuaranteedOrder_multiFunnel() throws Exception {
+        getCamelContext().getRouteDefinition(AsynchInMessageRoute.ROUTE_ID_GUARANTEED_ORDER)
+                .adviceWith(getCamelContext(), new AdviceWithRouteBuilder() {
+                    @Override
+                    public void configure() throws Exception {
+                        weaveById("toAsyncRoute").replace().to("mock:test");
+                    }
+                });
+
+        // prepare message - only one message
+        Message msg = insertNewMessage("id1", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE_ONE, FUNNEL_VALUE_TWO);
+
+        mock.expectedMessageCount(1);
+        guaranteedProducer.sendBody(msg);
+        mock.assertIsSatisfied();
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.PROCESSING));
+
+        // prepare message - second message with different funnel value
+        msg = insertNewMessage("id2", MsgStateEnum.PROCESSING, true, "some value");
+
+        mock.expectedMessageCount(2);
+        guaranteedProducer.sendBody(msg);
+        mock.assertIsSatisfied();
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.PROCESSING));
+
+        // prepare message - third message that is not guaranteed
+        msg = insertNewMessage("id3", MsgStateEnum.PROCESSING, false, FUNNEL_VALUE_ONE);
+
+        mock.expectedMessageCount(3);
+        guaranteedProducer.sendBody(msg);
+        mock.assertIsSatisfied();
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.PROCESSING));
+
+        msg = insertNewMessage("id4", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE_TWO);
+        msg.setReceiveTimestamp(DateUtils.addSeconds(new Date(), 100));
+
+        mock.expectedMessageCount(3);
+        guaranteedProducer.sendBody(msg);
+        mock.assertIsSatisfied();
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+
+        msg = insertNewMessage("id5", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE_ONE);
+        msg.setReceiveTimestamp(DateUtils.addSeconds(new Date(), 200));
+
+        mock.expectedMessageCount(3);
+        guaranteedProducer.sendBody(msg);
+        mock.assertIsSatisfied();
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+
+        msg = insertNewMessage("id6", MsgStateEnum.PROCESSING, true, FUNNEL_VALUE_ONE, FUNNEL_VALUE_TWO);
+        msg.setReceiveTimestamp(DateUtils.addSeconds(new Date(), 300));
+
+        mock.expectedMessageCount(3);
+        guaranteedProducer.sendBody(msg);
+        mock.assertIsSatisfied();
+
+        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+    }
+
+    private Message insertNewMessage(String correlationId, MsgStateEnum state, boolean guaranteedOrder,
+                                     @Nullable String... funnelValues) {
         Date currDate = new Date();
 
         Message msg = new Message();
@@ -325,7 +413,9 @@ public class AsynchInMessageRouteTest extends AbstractCoreDbTest {
         msg.setService(ServiceTestEnum.CUSTOMER);
         msg.setOperationName("setCustomer");
         msg.setObjectId(null);
-        msg.setFunnelValue(funnelValue);
+        if (funnelValues != null && funnelValues.length != 0) {
+            msg.setFunnelValues(Arrays.asList(funnelValues));
+        }
         msg.setGuaranteedOrder(guaranteedOrder);
 
         msg.setPayload("xml");

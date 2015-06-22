@@ -18,14 +18,15 @@ package org.cleverbus.component.funnel;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.impl.DefaultProducer;
-import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.cleverbus.api.asynch.AsynchConstants;
 import org.cleverbus.api.entity.Message;
 import org.cleverbus.common.log.Log;
 import org.springframework.util.Assert;
 
-import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 
@@ -55,18 +56,25 @@ public class MsgFunnelProducer extends DefaultProducer {
 
         MsgFunnelEndpoint endpoint = (MsgFunnelEndpoint) getEndpoint();
 
-        String funnelValue = getFunnelValue(msg, endpoint);
+        Collection<String> funnelValues = getFunnelValues(msg, endpoint);
 
-        if (StringUtils.isBlank(funnelValue)) {
+        if (CollectionUtils.isEmpty(funnelValues)) {
             Log.debug("Message " + msg.toHumanString() + " doesn't have funnel value => won't be filtered");
         } else {
             // set ID to message
             String funnelCompId = getFunnelCompId(msg, exchange, endpoint);
 
+            //is equal funnel values on endpoint and on message
+            boolean equalFunnelValues = CollectionUtils.isEqualCollection(funnelValues, msg.getFunnelValues());
             //set funnel value if not equals and funnel id
-            if (!ObjectUtils.equals(funnelValue, msg.getFunnelValue())
-                    || !funnelCompId.equals(msg.getFunnelComponentId())){
-                endpoint.getMessageService().setFunnelComponentIdAndValue(msg, funnelCompId, funnelValue);
+            if (!equalFunnelValues || !funnelCompId.equals(msg.getFunnelComponentId())) {
+                //add funnel value into message if is not equal and save it
+                if (!equalFunnelValues) {
+                    endpoint.getMessageService().setFunnelComponentIdAndValue(msg, funnelCompId, funnelValues);
+                } else {
+                    //funnel component id is not same, than we save it
+                    endpoint.getMessageService().setFunnelComponentId(msg, funnelCompId);
+                }
             }
 
             if (endpoint.isGuaranteedOrder()) {
@@ -74,40 +82,40 @@ public class MsgFunnelProducer extends DefaultProducer {
                 // and if it's necessary to guarantee processing order then also PARTLY_FAILED, POSTPONED [and FAILED]
                 // messages should be involved
                 List<Message> messages = endpoint.getMessageService().getMessagesForGuaranteedOrderForFunnel(
-                        funnelValue, endpoint.getIdleInterval(), endpoint.isExcludeFailedState(),
+                        funnelValues, endpoint.getIdleInterval(), endpoint.isExcludeFailedState(),
                         funnelCompId);
 
                 if (messages.size() == 1) {
-                    Log.debug("There is only one processing message with funnel value: " + funnelValue
+                    Log.debug("There is only one processing message with funnel values: " + funnelValues
                             + " => no filtering");
 
                 // is specified message first one for processing?
                 } else if (messages.get(0).equals(msg)) {
-                    Log.debug("Processing message (msg_id = {}, funnel value = '{}') is the first one"
-                            + " => no filtering", msg.getMsgId(), funnelValue);
+                    Log.debug("Processing message (msg_id = {}, funnel values = '{}') is the first one"
+                            + " => no filtering", msg.getMsgId(), funnelValues);
 
                 } else {
-                    Log.debug("There is at least one processing message with funnel value '{}'"
+                    Log.debug("There is at least one processing message with funnel values '{}'"
                             + " before current message (msg_id = {}); message {} will be postponed.",
-                            funnelValue, msg.getMsgId(), msg.toHumanString());
+                            funnelValues, msg.getMsgId(), msg.toHumanString());
 
                     postponeMessage(exchange, msg, endpoint);
                 }
 
             } else {
                 // is there processing message with same funnel value?
-                int count = endpoint.getMessageService().getCountProcessingMessagesForFunnel(funnelValue,
+                int count = endpoint.getMessageService().getCountProcessingMessagesForFunnel(funnelValues,
                         endpoint.getIdleInterval(), funnelCompId);
 
                 if (count > 1) {
                     // note: one processing message is this message
-                    Log.debug("There are more processing messages with funnel value '" + funnelValue
+                    Log.debug("There are more processing messages with funnel values '" + funnelValues
                             + "', message " + msg.toHumanString() + " will be postponed.");
 
                     postponeMessage(exchange, msg, endpoint);
 
                 } else {
-                    Log.debug("There is only one processing message with funnel value: " + funnelValue
+                    Log.debug("There is only one processing message with funnel values: " + funnelValues
                             + " => no filtering");
                 }
             }
@@ -134,25 +142,26 @@ public class MsgFunnelProducer extends DefaultProducer {
     }
 
     /**
-     * Return funnelValue from message or endpoint.
-     * <p>
-     * If endpoint has funnel value ({@link MsgFunnelEndpoint#getFunnelValue()}), then we used it, or we
-     * used funnel value on {@link Message} ({@link Message#getFunnelValue()}).
-     * </p>
+     * Return funnelValues from message (if message has funnel values) and endpoint (endpoint can have only one
+     * funnel value).
      *
      * @param msg      message
      * @param endpoint funnel endpoint
-     * @return funnel value, {@code NULL} - no funnel value found
+     * @return funnel values
      */
-    @Nullable
-    private String getFunnelValue(Message msg, MsgFunnelEndpoint endpoint) {
+    private Collection<String> getFunnelValues(Message msg, MsgFunnelEndpoint endpoint) {
         Assert.notNull(msg, "msg must not be null");
         Assert.notNull(endpoint, "endpoint must not be null");
 
-        String result = endpoint.getFunnelValue();
-        //if is blank, than we used from Message
-        if (StringUtils.isBlank(result)) {
-            result = msg.getFunnelValue();
+        List<String> result = new ArrayList<String>();
+
+        //get funnel values from message
+        result.addAll(msg.getFunnelValues());
+
+        String endpointFunnelValue = endpoint.getFunnelValue();
+        //funnel value from endpoint
+        if (!StringUtils.isBlank(endpointFunnelValue)) {
+            result.add(endpointFunnelValue);
         }
         return result;
     }

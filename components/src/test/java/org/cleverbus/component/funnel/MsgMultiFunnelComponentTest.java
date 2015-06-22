@@ -1,19 +1,3 @@
-/*
- * Copyright 2014 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.cleverbus.component.funnel;
 
 import org.apache.camel.EndpointInject;
@@ -28,9 +12,6 @@ import org.cleverbus.api.entity.Message;
 import org.cleverbus.api.entity.MsgStateEnum;
 import org.cleverbus.api.route.AbstractBasicRoute;
 import org.cleverbus.component.AbstractComponentsDbTest;
-import org.cleverbus.test.EntityTypeTestEnum;
-import org.cleverbus.test.ExternalSystemTestEnum;
-import org.cleverbus.test.ServiceTestEnum;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,23 +19,24 @@ import org.junit.Test;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
-import java.util.UUID;
 
 import static org.apache.camel.component.mock.MockEndpoint.assertIsSatisfied;
 
-
 /**
- * Test suite for {@link MsgFunnelComponent}.
+ * Test suite for {@link MsgFunnelComponent} with multi funnel value in {@link Message}.
  *
- * @author <a href="mailto:petr.juza@cleverlance.com">Petr Juza</a>
+ * @author Radek Čermák [<a href="mailto:radek.cermak@cleverlance.com">radek.cermak@cleverlance.com</a>]
+ * @since 2.0.4
  */
 @Transactional
-public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
+public class MsgMultiFunnelComponentTest extends AbstractComponentsDbTest {
 
     private static final String MSG_BODY = "some body";
     private static final String FUNNEL_VALUE = "774724557";
     private static final String DIFFERENT_FUNNEL_VALUE = "DIFFERENT_FUEL_VALUE";
+    private static final String MULTI_FUNNEL_VALUE = "MULTI_FUNNEL_VALUE";
     private static final String FUNNEL_ID = "myFunnelId";
 
     @Produce(uri = "direct:start")
@@ -82,35 +64,10 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
 
     @Before
     public void prepareMessage() throws Exception {
-        firstMsg = createMessage(FUNNEL_VALUE);
+        firstMsg = MsgFunnelComponentTest.createMessage(FUNNEL_VALUE, MULTI_FUNNEL_VALUE);
 
         em.persist(firstMsg);
         em.flush();
-    }
-
-    protected static Message createMessage(String... funnelValue) {
-        Date currDate = new Date();
-
-        Message msg = new Message();
-        msg.setState(MsgStateEnum.PROCESSING);
-        msg.setMsgTimestamp(currDate);
-        msg.setReceiveTimestamp(currDate);
-        msg.setSourceSystem(ExternalSystemTestEnum.CRM);
-        msg.setCorrelationId(UUID.randomUUID().toString());
-        msg.setStartProcessTimestamp(currDate);
-
-        msg.setService(ServiceTestEnum.CUSTOMER);
-        msg.setOperationName("setCustomer");
-        msg.setPayload("payload");
-        msg.setLastUpdateTimestamp(currDate);
-        msg.setObjectId("objectID");
-        msg.setEntityType(EntityTypeTestEnum.ACCOUNT);
-        if (funnelValue != null && funnelValue.length != 0) {
-            msg.setFunnelValues(Arrays.asList(funnelValue));
-        }
-        msg.setFunnelComponentId(FUNNEL_ID);
-
-        return msg;
     }
 
     @Before
@@ -119,8 +76,8 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
             @Override
             public void doConfigure() throws Exception {
                 from("direct:start")
-                    .to("msg-funnel:default?idleInterval=50&id=" + FUNNEL_ID)
-                    .to("mock:test");
+                        .to("msg-funnel:default?idleInterval=50&id=" + FUNNEL_ID)
+                        .to("mock:test");
             }
         };
 
@@ -130,8 +87,8 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
             @Override
             public void doConfigure() throws Exception {
                 from("direct:startGuaranteed")
-                    .to("msg-funnel:default?idleInterval=50&guaranteedOrder=true&id=" + FUNNEL_ID)
-                    .to("mock:test");
+                        .to("msg-funnel:default?idleInterval=50&guaranteedOrder=true&id=" + FUNNEL_ID)
+                        .to("mock:test");
             }
         };
 
@@ -141,8 +98,8 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
             @Override
             public void doConfigure() throws Exception {
                 from("direct:startGuaranteedWithoutFailed")
-                    .to("msg-funnel:default?idleInterval=50&guaranteedOrder=true&excludeFailedState=true&id=" + FUNNEL_ID)
-                    .to("mock:test");
+                        .to("msg-funnel:default?idleInterval=50&guaranteedOrder=true&excludeFailedState=true&id=" + FUNNEL_ID)
+                        .to("mock:test");
             }
         };
 
@@ -185,10 +142,10 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
     }
 
     @Test
-    public void testFunnel() throws Exception {
+    public void testMultiFunnelValue() throws Exception {
         mock.setExpectedMessageCount(0);
 
-        Message msg = createMessage(FUNNEL_VALUE);
+        Message msg = MsgFunnelComponentTest.createMessage(FUNNEL_VALUE, MULTI_FUNNEL_VALUE, DIFFERENT_FUNNEL_VALUE);
         em.persist(msg);
         em.flush();
 
@@ -204,7 +161,7 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
     public void testFunnel_waitingForResponse() throws Exception {
         mock.setExpectedMessageCount(1);
 
-        Message msg = createMessage(FUNNEL_VALUE);
+        Message msg = MsgFunnelComponentTest.createMessage(MULTI_FUNNEL_VALUE);
         msg.setStartProcessTimestamp(DateUtils.addSeconds(new Date(), -MsgFunnelEndpoint.DEFAULT_IDLE_INTERVAL - 100));
         msg.setState(MsgStateEnum.WAITING_FOR_RES);
         em.persist(msg);
@@ -222,21 +179,9 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
     public void testFunnel_noFilter() throws Exception {
         mock.setExpectedMessageCount(1);
 
-        Message msg = createMessage("777123456");
+        Message msg = MsgFunnelComponentTest.createMessage("777123456", "777999111");
 
         // send message with different funnel value
-        producer.sendBodyAndHeader(MSG_BODY, AsynchConstants.MSG_HEADER, msg);
-
-        mock.assertIsSatisfied();
-    }
-
-    @Test
-    public void testWithoutFunnel() throws Exception {
-        mock.setExpectedMessageCount(1);
-
-        Message msg = createMessage(null);
-
-        // input message doesn't have funnel value
         producer.sendBodyAndHeader(MSG_BODY, AsynchConstants.MSG_HEADER, msg);
 
         mock.assertIsSatisfied();
@@ -256,7 +201,7 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
     public void testFunnelForGuaranteedOrder_firstMessage() throws Exception {
         mock.setExpectedMessageCount(1);
 
-        Message msg = createMessage(FUNNEL_VALUE);
+        Message msg = MsgFunnelComponentTest.createMessage(FUNNEL_VALUE, DIFFERENT_FUNNEL_VALUE);
         msg.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), -100)); // be before "first" message
         msg.setState(MsgStateEnum.PROCESSING);
         em.persist(msg);
@@ -274,7 +219,7 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
     public void testFunnelForGuaranteedOrder_postponeMessage() throws Exception {
         mock.setExpectedMessageCount(0);
 
-        Message msg = createMessage(FUNNEL_VALUE);
+        Message msg = MsgFunnelComponentTest.createMessage(FUNNEL_VALUE, DIFFERENT_FUNNEL_VALUE);
         msg.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), 100)); // be after "first" message
         msg.setState(MsgStateEnum.PROCESSING);
         em.persist(msg);
@@ -289,50 +234,11 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
     }
 
     @Test
-    public void testFunnelForGuaranteedOrder_excludeFailedState() throws Exception {
-        mock.setExpectedMessageCount(1);
-
-        Message msg = createMessage(FUNNEL_VALUE);
-        msg.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), 100)); // be after "first" message, but FAILED
-        msg.setState(MsgStateEnum.FAILED);
-        em.persist(msg);
-        em.flush();
-
-        // send message has "msgTimestamp" after another processing message but in FAILED state
-        //  that is excluded => continue
-        producerForGuaranteedWithoutFailed.sendBodyAndHeader(MSG_BODY, AsynchConstants.MSG_HEADER, msg);
-
-        assertIsSatisfied(mock);
-
-        Assert.assertThat(em.find(Message.class, msg.getMsgId()).getState(), CoreMatchers.is(MsgStateEnum.FAILED));
-    }
-
-    @Test
     public void testFunnelForOwnFunnelValue() throws Exception {
         mock.setExpectedMessageCount(0);
 
         //message without funnel value
-        Message msg = createMessage(null);
-        em.persist(msg);
-        em.flush();
-
-        // send message with setting funnel value in route => postpone it
-        producerForFunnelValue.sendBodyAndHeader(MSG_BODY, AsynchConstants.MSG_HEADER, msg);
-
-        assertIsSatisfied(mock);
-
-        msg = em.find(Message.class, msg.getMsgId());
-        Assert.assertNotNull(msg);
-        Assert.assertThat(msg.getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
-        Assert.assertTrue(msg.getFunnelValues().contains(FUNNEL_VALUE));
-    }
-
-    @Test
-    public void testFunnelForOwnFunnelValue_withValue() throws Exception {
-        mock.setExpectedMessageCount(0);
-
-        //message without different funnel value
-        Message msg = createMessage(DIFFERENT_FUNNEL_VALUE);
+        Message msg = MsgFunnelComponentTest.createMessage(DIFFERENT_FUNNEL_VALUE);
         em.persist(msg);
         em.flush();
 
@@ -345,15 +251,15 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
         Assert.assertNotNull(msg);
         Assert.assertThat(msg.getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
         Assert.assertEquals(2, msg.getFunnelValues().size());
-        Assert.assertTrue(msg.getFunnelValues().contains(FUNNEL_VALUE));
-        Assert.assertTrue(msg.getFunnelValues().contains(DIFFERENT_FUNNEL_VALUE));
+        Assert.assertTrue(CollectionUtils.isEqualCollection(msg.getFunnelValues(),
+                Arrays.asList(FUNNEL_VALUE, DIFFERENT_FUNNEL_VALUE)));
     }
 
     @Test
     public void testFunnelForOwnFunnelValueGuaranteed_Postponed() throws Exception {
         mock.setExpectedMessageCount(0);
 
-        Message msg = createMessage(FUNNEL_VALUE);
+        Message msg = MsgFunnelComponentTest.createMessage(FUNNEL_VALUE);
         msg.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), 100)); // be after "first" message
         msg.setState(MsgStateEnum.PROCESSING);
         em.persist(msg);
@@ -372,10 +278,10 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
     }
 
     @Test
-    public void testFunnelForOwnFunnelValueGuaranteedNoValue_Processing() throws Exception {
+    public void testFunnelForOwnFunnelValueGuaranteed_Processing() throws Exception {
         mock.setExpectedMessageCount(1);
 
-        Message msg = createMessage(null);
+        Message msg = MsgFunnelComponentTest.createMessage("777999888");
         msg.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), 100)); // be after "first" message
         msg.setState(MsgStateEnum.PROCESSING);
         em.persist(msg);
@@ -389,14 +295,16 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
         msg = em.find(Message.class, msg.getMsgId());
         Assert.assertNotNull(msg);
         Assert.assertThat(msg.getState(), CoreMatchers.is(MsgStateEnum.PROCESSING));
-        Assert.assertTrue(msg.getFunnelValues().contains(DIFFERENT_FUNNEL_VALUE));
+        Assert.assertEquals(2, msg.getFunnelValues().size());
+        Assert.assertTrue(CollectionUtils.isEqualCollection(msg.getFunnelValues(),
+                Arrays.asList("777999888", DIFFERENT_FUNNEL_VALUE)));
     }
 
     @Test
     public void testFunnelForOwnFunnelValueGuaranteed_firstMessage() throws Exception {
         mock.setExpectedMessageCount(1);
 
-        Message msg = createMessage(null);
+        Message msg = MsgFunnelComponentTest.createMessage(DIFFERENT_FUNNEL_VALUE);
         msg.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), -100)); // be before "first" message
         msg.setState(MsgStateEnum.PROCESSING);
         em.persist(msg);
@@ -410,14 +318,16 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
         msg = em.find(Message.class, msg.getMsgId());
         Assert.assertNotNull(msg);
         Assert.assertThat(msg.getState(), CoreMatchers.is(MsgStateEnum.PROCESSING));
-        Assert.assertTrue(msg.getFunnelValues().contains(FUNNEL_VALUE));
+        Assert.assertEquals(2, msg.getFunnelValues().size());
+        Assert.assertTrue(CollectionUtils.isEqualCollection(msg.getFunnelValues(),
+                Arrays.asList(FUNNEL_VALUE, DIFFERENT_FUNNEL_VALUE)));
     }
 
     @Test
     public void testFunnelForOwnFunnelValueGuaranteed_postponeMessage() throws Exception {
         mock.setExpectedMessageCount(0);
 
-        Message msg = createMessage(null);
+        Message msg = MsgFunnelComponentTest.createMessage(DIFFERENT_FUNNEL_VALUE);
         msg.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), 100)); // be after "first" message
         msg.setState(MsgStateEnum.PROCESSING);
         em.persist(msg);
@@ -431,6 +341,75 @@ public class MsgFunnelComponentTest extends AbstractComponentsDbTest {
         msg = em.find(Message.class, msg.getMsgId());
         Assert.assertNotNull(msg);
         Assert.assertThat(msg.getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
-        Assert.assertTrue(msg.getFunnelValues().contains(FUNNEL_VALUE));
+        Assert.assertEquals(2, msg.getFunnelValues().size());
+        Assert.assertTrue(CollectionUtils.isEqualCollection(msg.getFunnelValues(),
+                Arrays.asList(FUNNEL_VALUE, DIFFERENT_FUNNEL_VALUE)));
+    }
+
+    @Test
+    public void testFunnelValueGuaranteed_multiFunnelMessage() throws Exception {
+        mock.setExpectedMessageCount(1);
+
+        Message msgFirst = MsgFunnelComponentTest.createMessage(MULTI_FUNNEL_VALUE);
+        msgFirst.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), 100)); // be after "first" message
+        em.persist(msgFirst);
+        em.flush();
+
+        //send first message
+        producerForGuaranteed.sendBodyAndHeader(MSG_BODY, AsynchConstants.MSG_HEADER, msgFirst);
+
+        Message msgSecond = MsgFunnelComponentTest.createMessage(FUNNEL_VALUE, DIFFERENT_FUNNEL_VALUE);
+        msgSecond.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), 150)); // be after "first" message
+        em.persist(msgSecond);
+        em.flush();
+
+        //send second message
+        producerForGuaranteed.sendBodyAndHeader(MSG_BODY, AsynchConstants.MSG_HEADER, msgSecond);
+
+        Message msgThird = MsgFunnelComponentTest.createMessage(DIFFERENT_FUNNEL_VALUE);
+        msgThird.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), 200)); // be after "first" message
+        em.persist(msgThird);
+        em.flush();
+
+        //send third message
+        producerForGuaranteed.sendBodyAndHeader(MSG_BODY, AsynchConstants.MSG_HEADER, msgThird);
+
+        Message msgFourth = MsgFunnelComponentTest.createMessage("777111222");
+        msgFourth.setMsgTimestamp(DateUtils.addSeconds(firstMsg.getMsgTimestamp(), 250)); // be after "first" message
+        em.persist(msgFourth);
+        em.flush();
+
+        //send fourth message
+        producerForGuaranteed.sendBodyAndHeader(MSG_BODY, AsynchConstants.MSG_HEADER, msgFourth);
+
+        assertIsSatisfied(mock);
+
+        msgFirst = em.find(Message.class, msgFirst.getMsgId());
+        Assert.assertNotNull(msgFirst);
+        Assert.assertThat(msgFirst.getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+        Assert.assertEquals(1, msgFirst.getFunnelValues().size());
+        Assert.assertTrue(CollectionUtils.isEqualCollection(msgFirst.getFunnelValues(),
+                Collections.singletonList(MULTI_FUNNEL_VALUE)));
+
+        msgSecond = em.find(Message.class, msgSecond.getMsgId());
+        Assert.assertNotNull(msgSecond);
+        Assert.assertThat(msgSecond.getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+        Assert.assertEquals(2, msgSecond.getFunnelValues().size());
+        Assert.assertTrue(CollectionUtils.isEqualCollection(msgSecond.getFunnelValues(),
+                Arrays.asList(FUNNEL_VALUE, DIFFERENT_FUNNEL_VALUE)));
+
+        msgThird = em.find(Message.class, msgThird.getMsgId());
+        Assert.assertNotNull(msgThird);
+        Assert.assertThat(msgThird.getState(), CoreMatchers.is(MsgStateEnum.POSTPONED));
+        Assert.assertEquals(1, msgThird.getFunnelValues().size());
+        Assert.assertTrue(CollectionUtils.isEqualCollection(msgThird.getFunnelValues(),
+                Collections.singletonList(DIFFERENT_FUNNEL_VALUE)));
+
+        msgFourth = em.find(Message.class, msgFourth.getMsgId());
+        Assert.assertNotNull(msgFourth);
+        Assert.assertThat(msgFourth.getState(), CoreMatchers.is(MsgStateEnum.PROCESSING));
+        Assert.assertEquals(1, msgFourth.getFunnelValues().size());
+        Assert.assertTrue(CollectionUtils.isEqualCollection(msgFourth.getFunnelValues(),
+                Collections.singletonList("777111222")));
     }
 }

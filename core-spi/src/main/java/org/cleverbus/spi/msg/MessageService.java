@@ -183,37 +183,50 @@ public interface MessageService {
     int getCountMessages(MsgStateEnum state, @Nullable Integer interval);
 
     /**
-     * Get count of processing messages for specified funnel value and funnel ID.
+     * Get count of processing messages that contains one funnel value from parameter and funnel ID.
+     * <p>
+     * In {@link Message} will be return items, which has contains only one funnel value from parameter funnelValues.
+     * If parameter funnelValues is empty, no {@link Message} will be returned.
+     * </p>
      *
-     * @param funnelValue the funnel value
+     * @param funnelValues the funnel values
      * @param idleInterval interval (in seconds) that determines how long can be message processing
      * @param funnelCompId the funnel component ID
      * @return count of processing messages
      */
-    int getCountProcessingMessagesForFunnel(String funnelValue, int idleInterval, String funnelCompId);
+    int getCountProcessingMessagesForFunnel(Collection<String> funnelValues, int idleInterval, String funnelCompId);
 
     /**
-     * Gets list of messages with specified funnel value for guaranteed processing order of whole routes.
+     * Gets list of messages that contains one funnel value from parameter for guaranteed processing order of whole
+     * routes.
+     * <p>
+     * In {@link Message} will be return items, which has contains only one funnel value from parameter funnelValues.
+     * If parameter funnelValues is empty, no {@link Message} will be returned.
+     * </p>
      *
-     * @param funnelValue the funnel value
+     * @param funnelValues       the funnel values
      * @param excludeFailedState {@link MsgStateEnum#FAILED FAILED} state is used by default;
      *                           use {@code true} if you want to exclude FAILED state
      * @return list of messages ordered by {@link Message#getMsgTimestamp() message timestamp}
      */
-    List<Message> getMessagesForGuaranteedOrderForRoute(String funnelValue, boolean excludeFailedState);
+    List<Message> getMessagesForGuaranteedOrderForRoute(Collection<String> funnelValues, boolean excludeFailedState);
 
     /**
-     * Gets list of messages with specified funnel value for guaranteed processing order of messages
+     * Gets list of messages that contains one funnel value from parameter for guaranteed processing order of messages
      * for specified funnel.
+     * <p>
+     * In {@link Message} will be return items, which has contains only one funnel value from parameter funnelValues.
+     * If parameter funnelValues is empty, no {@link Message} will be returned.
+     * </p>
      *
-     * @param funnelValue the funnel value
+     * @param funnelValues the funnel values
      * @param idleInterval interval (in seconds) that determines how long can message be processing
      * @param excludeFailedState {@link MsgStateEnum#FAILED FAILED} state is used by default;
      *                           use {@code true} if you want to exclude FAILED state
      * @param funnelCompId the funnel component ID
      * @return list of messages ordered by {@link Message#getMsgTimestamp() message timestamp}
      */
-    List<Message> getMessagesForGuaranteedOrderForFunnel(String funnelValue, int idleInterval,
+    List<Message> getMessagesForGuaranteedOrderForFunnel(Collection<String> funnelValues, int idleInterval,
             boolean excludeFailedState, String funnelCompId);
 
     /**
@@ -232,19 +245,19 @@ public interface MessageService {
     void setFunnelComponentId(Message msg, String funnelCompId);
 
     /**
-     * Sets funnel value to specified message.
+     * Sets funnel values to specified message.
      *
      * @param msg         the message
-     * @param funnelValue the funnel value
+     * @param funnelValues the funnel values
      */
-    void setFunnelValue(Message msg, String funnelValue);
+    void setFunnelValue(Message msg, Collection<String> funnelValues);
 
     /**
-     * Sets funnel component identifier and funnel value to specified message.
+     * Sets funnel component identifier and funnel values to specified message.
      *
      * @param msg          the message
      * @param funnelCompId the funnel component ID
-     * @param funnelValue  the funnel value
+     * @param funnelValues  the funnel values
      */
-    void setFunnelComponentIdAndValue(Message msg, String funnelCompId, String funnelValue);
+    void setFunnelComponentIdAndValue(Message msg, String funnelCompId, Collection<String> funnelValues);
 }

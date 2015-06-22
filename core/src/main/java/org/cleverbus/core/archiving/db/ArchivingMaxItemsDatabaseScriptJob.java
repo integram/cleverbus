@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
  * After succesfull archive data will be called procedure {@value #REINDEX_PROCEDURE_NAME} for reindex
  * all tables.
  *
- * @author Radek Čermák [<a href="mailto:radek.cermak@openwise.cz">radek.cermak@openwise.cz</a>]
+ * @author Radek Čermák [<a href="mailto:radek.cermak@cleverlance.com">radek.cermak@cleverlance.com</a>]
  * @see ProcessArchivingDataJob
  * @see ProcessArchivingDataRoute
  * @see ArchivingDatabaseScriptJob

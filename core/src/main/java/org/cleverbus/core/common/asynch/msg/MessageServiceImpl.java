@@ -340,21 +340,29 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public int getCountProcessingMessagesForFunnel(String funnelValue, int idleInterval, String funnelCompId) {
-        Assert.hasText(funnelValue, "the funnelValue must not be empty");
+    public int getCountProcessingMessagesForFunnel(Collection<String> funnelValues, int idleInterval,
+                                                   String funnelCompId) {
+        Assert.notNull(funnelValues, "the funnelValues must not be empty");
+        Assert.hasText(funnelCompId, "funnelCompId must not be empty");
 
-        return messageDao.getCountProcessingMessagesForFunnel(funnelValue, idleInterval, funnelCompId);
+        return messageDao.getCountProcessingMessagesForFunnel(funnelValues, idleInterval, funnelCompId);
     }
 
     @Override
-    public List<Message> getMessagesForGuaranteedOrderForRoute(String funnelValue, boolean excludeFailedState) {
-        return messageDao.getMessagesForGuaranteedOrderForRoute(funnelValue, excludeFailedState);
+    public List<Message> getMessagesForGuaranteedOrderForRoute(Collection<String> funnelValues,
+                                                               boolean excludeFailedState) {
+        Assert.notNull(funnelValues, "funnelValues must not be null");
+
+        return messageDao.getMessagesForGuaranteedOrderForRoute(funnelValues, excludeFailedState);
     }
 
     @Override
-    public List<Message> getMessagesForGuaranteedOrderForFunnel(String funnelValue, int idleInterval,
+    public List<Message> getMessagesForGuaranteedOrderForFunnel(Collection<String> funnelValues, int idleInterval,
             boolean excludeFailedState, String funnelCompId) {
-        return messageDao.getMessagesForGuaranteedOrderForFunnel(funnelValue, idleInterval, excludeFailedState,
+        Assert.notNull(funnelValues, "funnelValues must not be null");
+        Assert.hasText(funnelCompId, "funnelCompId must not be empty");
+
+        return messageDao.getMessagesForGuaranteedOrderForFunnel(funnelValues, idleInterval, excludeFailedState,
                 funnelCompId);
     }
 
@@ -393,38 +401,38 @@ public class MessageServiceImpl implements MessageService {
 
     @Transactional
     @Override
-    public void setFunnelValue(Message msg, String funnelValue) {
+    public void setFunnelValue(Message msg, Collection<String> funnelValues) {
         Assert.notNull(msg, "the msg must not be null");
-        Assert.hasText(funnelValue, "the funnelValue must not be empty");
+        Assert.notNull(funnelValues, "the funnelValues must not be empty");
 
         Assert.isTrue(msg.getState().equals(MsgStateEnum.PROCESSING),
                 "the message must be in PROCESSING state, but state is " + msg.getState());
 
-        msg.setFunnelValue(funnelValue);
+        msg.setFunnelValues(funnelValues);
         msg.setLastUpdateTimestamp(new Date());
 
         messageDao.update(msg);
 
-        Log.debug("Sets funnel value of the message " + msg.toHumanString() + " to value: " + funnelValue);
+        Log.debug("Sets funnel value of the message " + msg.toHumanString() + " to values: " + funnelValues);
     }
 
     @Transactional
     @Override
-    public void setFunnelComponentIdAndValue(Message msg, String funnelCompId, String funnelValue) {
+    public void setFunnelComponentIdAndValue(Message msg, String funnelCompId, Collection<String> funnelValues) {
         Assert.notNull(msg, "the msg must not be null");
         Assert.hasText(funnelCompId, "the funnelCompId must not be empty");
-        Assert.hasText(funnelValue, "the funnelValue must not be empty");
+        Assert.notNull(funnelValues, "the funnelValues must not be empty");
 
         Assert.isTrue(msg.getState().equals(MsgStateEnum.PROCESSING),
                 "the message must be in PROCESSING state, but state is " + msg.getState());
 
         msg.setFunnelComponentId(funnelCompId);
-        msg.setFunnelValue(funnelValue);
+        msg.setFunnelValues(funnelValues);
         msg.setLastUpdateTimestamp(new Date());
 
         messageDao.update(msg);
 
         Log.debug("Sets funnel ID of the message " + msg.toHumanString() + " to value: " + funnelCompId
-                + " and funnel value to: " + funnelValue);
+                + " and funnel values to: " + funnelValues);
     }
 }
