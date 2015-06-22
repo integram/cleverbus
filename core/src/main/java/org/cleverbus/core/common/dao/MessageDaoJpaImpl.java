@@ -81,7 +81,7 @@ public class MessageDaoJpaImpl implements MessageDao {
                 "SELECT m FROM " + Message.class.getName() + " m "
                         + " left join fetch m.externalCalls  "
                         + " left join fetch m.requests  "
-                + "WHERE m.msgId = :msgId", Message.class);
+                        + "WHERE m.msgId = :msgId", Message.class);
         q.setParameter("msgId", msgId);
 
         return q.getSingleResult();
@@ -254,6 +254,9 @@ public class MessageDaoJpaImpl implements MessageDao {
     @Override
     public int getCountProcessingMessagesForFunnel(Collection<String> funnelValues, int idleInterval,
                                                    String funnelCompId) {
+        Assert.notEmpty(funnelValues, "funnelValues must not be empty");
+        Assert.hasText(funnelCompId, "funnelCompId must not be empty");
+
         String jSql = "SELECT COUNT(m) "
                 + "FROM " + Message.class.getName() + " m "
                 + "INNER JOIN m.funnels f "
@@ -283,9 +286,9 @@ public class MessageDaoJpaImpl implements MessageDao {
                                                                boolean excludeFailedState) {
         Assert.notNull(funnelValues, "funnelValues must not be null");
 
-        if (funnelValues.isEmpty()){
+        if (funnelValues.isEmpty()) {
             return Collections.emptyList();
-        }else {
+        } else {
             //TODO (juza) limit select to specific number of items + add msgId DESC to sorting (parent vs. child)
             String jSql = "SELECT m "
                     + "FROM " + Message.class.getName() + " m "
@@ -303,7 +306,7 @@ public class MessageDaoJpaImpl implements MessageDao {
                     + "      AND m.guaranteedOrder is true"
                     + "      AND (";
 
-            for (String funnelValue : funnelValues){
+            for (String funnelValue : funnelValues) {
                 jSql += "f.funnelValue = '" + funnelValue + "' OR ";
             }
             //remove last or
@@ -319,13 +322,13 @@ public class MessageDaoJpaImpl implements MessageDao {
 
     @Override
     public List<Message> getMessagesForGuaranteedOrderForFunnel(Collection<String> funnelValues, int idleInterval,
-            boolean excludeFailedState, String funnelCompId) {
+                                                                boolean excludeFailedState, String funnelCompId) {
         Assert.notNull(funnelValues, "funnelValues must not be null");
         Assert.hasText(funnelCompId, "funnelCompId must not be empty");
 
-        if (funnelValues.isEmpty()){
+        if (funnelValues.isEmpty()) {
             return Collections.emptyList();
-        }else {
+        } else {
             String jSql = "SELECT m "
                     + "FROM " + Message.class.getName() + " m "
                     + "INNER JOIN m.funnels f "
