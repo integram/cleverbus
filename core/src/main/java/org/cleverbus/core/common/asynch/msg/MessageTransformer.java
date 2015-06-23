@@ -134,7 +134,9 @@ public final class MessageTransformer {
         //settings funnel values
         if (!CollectionUtils.isEmpty(funnelValues)){
             for (String fnlValue : funnelValues){
-                funnels.add(fnlValue);
+                if (!StringUtils.isBlank(fnlValue)) {
+                    funnels.add(fnlValue);
+                }
             }
         }
         if (!funnels.isEmpty()) {
