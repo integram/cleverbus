@@ -24,6 +24,7 @@ import org.cleverbus.api.common.HumanReadable;
 import org.cleverbus.api.exception.ErrorExtEnum;
 import org.hibernate.annotations.*;
 import org.hibernate.annotations.CascadeType;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.util.Assert;
 
 import javax.annotation.Nullable;
@@ -31,6 +32,7 @@ import javax.persistence.*;
 import javax.persistence.AccessType;
 import javax.persistence.Entity;
 import javax.persistence.Table;
+import java.text.Collator;
 import java.util.*;
 
 
@@ -774,7 +776,8 @@ public class Message implements HumanReadable {
         Collections.sort(result, new Comparator<Funnel>() {
             @Override
             public int compare(Funnel o1, Funnel o2) {
-                return o1.getId().compareTo(o2.getId());
+                return Collator.getInstance(LocaleContextHolder.getLocale()).compare(
+                        o1.getFunnelValue(), o2.getFunnelValue());
             }
         });
         return result;

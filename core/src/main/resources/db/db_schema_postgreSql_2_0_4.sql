@@ -17,9 +17,7 @@ create table funnel (
 alter table funnel add constraint fk_funnel_message foreign key (msg_id) references message;
 
 insert into funnel(funnel_id, msg_id, funnel_value)
-select nextval('hibernate_sequence'), msg_id, funnel_value from message where funnel_value IS NOT NULL AND state <> 'OK'
-
-alter table message drop column funnel_value
+select nextval('hibernate_sequence'), msg_id, funnel_value from message where funnel_value IS NOT NULL AND state <> 'OK';
 
 
 
