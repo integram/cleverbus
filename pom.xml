@@ -6,7 +6,7 @@
     <groupId>org.cleverbus</groupId>
     <artifactId>cleverbus-integration</artifactId>
     <packaging>pom</packaging>
-    <version>2.0.3.1</version>
+    <version>2.0.3.2-SNAPSHOT</version>
 
     <name>CleverBus Root</name>
     <description>CleverBus integration framework</description>
