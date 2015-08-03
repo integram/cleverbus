@@ -16,39 +16,27 @@
 
 package org.cleverbus.core.common.ws;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-
-import javax.xml.namespace.QName;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.dom.DOMSource;
-
 import org.cleverbus.api.exception.InternalErrorEnum;
 import org.cleverbus.api.exception.ValidationIntegrationException;
-
+import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.ws.context.MessageContext;
-import org.springframework.ws.soap.SoapBody;
-import org.springframework.ws.soap.SoapFault;
-import org.springframework.ws.soap.SoapFaultDetail;
-import org.springframework.ws.soap.SoapFaultDetailElement;
-import org.springframework.ws.soap.SoapHeader;
-import org.springframework.ws.soap.SoapHeaderElement;
-import org.springframework.ws.soap.SoapMessage;
+import org.springframework.ws.soap.*;
 import org.springframework.ws.soap.saaj.SaajSoapMessage;
 import org.springframework.ws.soap.server.endpoint.interceptor.PayloadValidatingInterceptor;
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
+import javax.xml.namespace.QName;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.dom.DOMSource;
+import java.io.IOException;
+import java.util.*;
+
 
 /**
  * Interceptor that validates the presence of trace header.
- * <p/>
+ * <p>
  * When the payload is invalid, this interceptor stops processing of the interceptor chain. Additionally, if the message
  * is a SOAP request message, a SOAP Fault is created as reply. Invalid SOAP responses do not result in a fault.
  *
@@ -59,7 +47,7 @@ public class HeaderAndPayloadValidatingInterceptor extends PayloadValidatingInte
     private static final String DEFAULT_FAULT_HEADER_REASON
             = InternalErrorEnum.E104.getErrorCode() + ": " + InternalErrorEnum.E104.getErrDesc();
 
-    public static QName TRACE_HEADER_ELM = new QName("http://cleverbus.org/ws/Common-v1", "traceHeader");
+    private QName traceHeaderElm = new QName("http://cleverbus.org/ws/Common-v1", "traceHeader");
 
     private boolean validateHeader = true;
 
@@ -117,14 +105,14 @@ public class HeaderAndPayloadValidatingInterceptor extends PayloadValidatingInte
             Iterator<SoapHeaderElement> itElements = soapHeader.examineAllHeaderElements();
             while (!headerFound && itElements.hasNext()) {
                 SoapHeaderElement elm = itElements.next();
-                if (TRACE_HEADER_ELM.equals(elm.getName())) {
+                if (traceHeaderElm.equals(elm.getName())) {
                     headerFound = true;
                 }
             }
         }
 
         if (!headerFound) {
-            errors.add(new ValidationIntegrationException("there is no header element: " + TRACE_HEADER_ELM));
+            errors.add(new ValidationIntegrationException("there is no header element: " + traceHeaderElm));
         }
 
         return errors.toArray(new ValidationIntegrationException[errors.size()]);
@@ -189,7 +177,42 @@ public class HeaderAndPayloadValidatingInterceptor extends PayloadValidatingInte
     public void setIgnoreRequests(Collection<String> ignoreRequests) {
         this.ignoreRequests = new HashSet<QName>();
         for (String ignoreRequest : ignoreRequests) {
-                this.ignoreRequests.add(QName.valueOf(ignoreRequest));
+            this.ignoreRequests.add(QName.valueOf(ignoreRequest));
         }
+    }
+
+    /**
+     * Sets namespace for trace header.
+     *
+     * @param namespaceUri namespace of trace header
+     */
+    public void setTraceHeaderElmNamespace(String namespaceUri) {
+        Assert.hasText(namespaceUri, "namespaceUri must not be empty");
+
+        setTraceHeaderElm(namespaceUri, traceHeaderElm.getLocalPart());
+    }
+
+    /**
+     * Sets local part for trace header.
+     *
+     * @param localPart local part of trace header
+     */
+    public void setTraceHeaderElmLocalPart(String localPart) {
+        Assert.hasText(localPart, "localPart must not be empty");
+
+        setTraceHeaderElm(traceHeaderElm.getNamespaceURI(), localPart);
+    }
+
+    /**
+     * Sets trace header namespace and local part.
+     *
+     * @param namespaceUri namespace of trace header
+     * @param localPart    local part of trace header
+     */
+    public void setTraceHeaderElm(String namespaceUri, String localPart) {
+        Assert.hasText(namespaceUri, "namespaceUri must not be empty");
+        Assert.hasText(localPart, "localPart must not be empty");
+
+        traceHeaderElm = new QName(namespaceUri, localPart);
     }
 }
