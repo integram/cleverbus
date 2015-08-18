@@ -201,24 +201,6 @@ select count(*) into DeletedCount from deleted_external_call;
 RAISE NOTICE '---- deleted_external_call tmp %', DeletedCount;
 
 
-
-insert into cleverbus_archive.archive_request (
-        req_id,msg_id,res_join_id,uri,req_envelope,req_timestamp
-        ) select * from deleted_request;
-RAISE NOTICE '---- archive_request insert %', timeofday()::timestamp;
-
-delete from request as t
-             USING deleted_request as req
-             where
-             t.req_id = req.req_id;
-
-GET DIAGNOSTICS DeletedCount = ROW_COUNT;
-RAISE NOTICE 'Calling delete from request - %', DeletedCount;
-IsMoreToDelete = DeletedCount = MaxAffectedRows;
-RAISE NOTICE '---- %', timeofday()::timestamp;
-
-
-
 insert into cleverbus_archive.archive_response (
 res_id,req_id,res_envelope,failed_reason,res_timestamp,failed,msg_id
         )
@@ -234,6 +216,22 @@ delete from response as t
 GET DIAGNOSTICS DeletedCount = ROW_COUNT;
 RAISE NOTICE 'Calling delete from response - %', DeletedCount;
 IsMoreToDelete = IsMoreToDelete or (DeletedCount = MaxAffectedRows);
+RAISE NOTICE '---- %', timeofday()::timestamp;
+
+
+insert into cleverbus_archive.archive_request (
+        req_id,msg_id,res_join_id,uri,req_envelope,req_timestamp
+        ) select * from deleted_request;
+RAISE NOTICE '---- archive_request insert %', timeofday()::timestamp;
+
+delete from request as t
+             USING deleted_request as req
+             where
+             t.req_id = req.req_id;
+
+GET DIAGNOSTICS DeletedCount = ROW_COUNT;
+RAISE NOTICE 'Calling delete from request - %', DeletedCount;
+IsMoreToDelete = DeletedCount = MaxAffectedRows;
 RAISE NOTICE '---- %', timeofday()::timestamp;
 
 
