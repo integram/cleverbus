@@ -13,12 +13,12 @@ public enum EmailContentType {
     /**
      * Body of email will be send as plain text.
      */
-    PLAIN_TEXT("text/plain"),
+    PLAIN_TEXT("text/plain; charset=\"utf-8\""),
 
     /**
      * Body of email will be send as html.
      */
-    HTML("text/html");
+    HTML("text/html; charset=\"utf-8\"");
 
     /**
      * Content type.
