@@ -1,6 +1,8 @@
 # IDE files
 .idea
 *.iml
+nbactions.xml
 
 # working directories
 /*/target
+/target
