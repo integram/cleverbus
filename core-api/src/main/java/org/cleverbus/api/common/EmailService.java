@@ -16,10 +16,13 @@
 
 package org.cleverbus.api.common;
 
+import org.cleverbus.api.common.email.Email;
+
 /**
  * Service for sending emails.
  *
  * @author <a href="mailto:petr.juza@cleverlance.com">Petr Juza</a>
+ * @see Email
  */
 public interface EmailService {
 
@@ -46,4 +49,10 @@ public interface EmailService {
      */
     void sendFormattedEmail(String recipients, String subject, String body, Object... values);
 
+    /**
+     * Send email defined in {@link Email}.
+     *
+     * @param email email that will be send
+     */
+    void sendEmail(Email email);
 }

@@ -16,11 +16,12 @@
 
 package org.cleverbus.component.asynchchild;
 
-import java.util.Arrays;
-import java.util.Date;
-import java.util.Set;
-import java.util.UUID;
-
+import org.apache.camel.CamelExecutionException;
+import org.apache.camel.Exchange;
+import org.apache.camel.ExchangePattern;
+import org.apache.camel.ProducerTemplate;
+import org.apache.camel.impl.DefaultProducer;
+import org.apache.commons.lang.StringUtils;
 import org.cleverbus.api.asynch.AsynchConstants;
 import org.cleverbus.api.asynch.msg.ChildMessage;
 import org.cleverbus.api.entity.ExternalSystemExtEnum;
@@ -29,15 +30,10 @@ import org.cleverbus.api.entity.MsgStateEnum;
 import org.cleverbus.api.entity.ServiceExtEnum;
 import org.cleverbus.common.log.Log;
 import org.cleverbus.spi.msg.MessageService;
-
-import org.apache.camel.CamelExecutionException;
-import org.apache.camel.Exchange;
-import org.apache.camel.ExchangePattern;
-import org.apache.camel.ProducerTemplate;
-import org.apache.camel.impl.DefaultProducer;
-import org.apache.commons.lang.StringUtils;
 import org.joda.time.DateTime;
 import org.springframework.util.Assert;
+
+import java.util.*;
 
 
 /**
@@ -92,7 +88,9 @@ public class AsynchChildProducer extends DefaultProducer {
         if (parentMsg != null) {
             // for asynchronous parent message - creates child message
             ChildMessage childMessage = new ChildMessage(parentMsg, endpoint.getBindingType(), serviceExt,
-                    endpoint.getOperationName(), body, endpoint.getObjectId(), null, endpoint.getFunnelValue());
+                    endpoint.getOperationName(), body, endpoint.getObjectId(), null,
+                    StringUtils.isBlank(endpoint.getFunnelValue())
+                            ? null : Collections.singletonList(endpoint.getFunnelValue()));
 
             newMsg = ChildMessage.createMessage(childMessage);
 

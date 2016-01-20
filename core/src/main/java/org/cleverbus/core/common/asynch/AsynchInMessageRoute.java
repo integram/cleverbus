@@ -16,15 +16,8 @@
 
 package org.cleverbus.core.common.asynch;
 
-import static org.cleverbus.api.asynch.AsynchConstants.ERR_CALLBACK_RES_PROP;
-import static org.cleverbus.api.asynch.AsynchConstants.OPERATION_HEADER;
-import static org.cleverbus.api.asynch.AsynchConstants.SERVICE_HEADER;
-import static org.cleverbus.api.asynch.AsynchConstants.URI_ASYNCH_IN_MSG;
-
-import java.sql.SQLException;
-import java.util.List;
-import java.util.Map;
-
+import org.apache.camel.*;
+import org.apache.camel.component.spring.ws.SpringWebserviceConstants;
 import org.cleverbus.api.asynch.AsynchConstants;
 import org.cleverbus.api.asynch.AsynchResponseProcessor;
 import org.cleverbus.api.asynch.model.CallbackResponse;
@@ -40,25 +33,21 @@ import org.cleverbus.common.log.Log;
 import org.cleverbus.common.log.LogContextFilter;
 import org.cleverbus.core.common.asynch.msg.MessageTransformer;
 import org.cleverbus.core.common.asynch.stop.StopService;
-import org.cleverbus.core.common.dao.DbConst;
 import org.cleverbus.core.common.event.AsynchEventHelper;
 import org.cleverbus.core.common.exception.ExceptionTranslator;
 import org.cleverbus.core.common.validator.TraceIdentifierValidator;
 import org.cleverbus.spi.msg.MessageService;
 import org.cleverbus.spi.throttling.ThrottleScope;
 import org.cleverbus.spi.throttling.ThrottlingProcessor;
-
-import org.apache.camel.Body;
-import org.apache.camel.Exchange;
-import org.apache.camel.ExchangePattern;
-import org.apache.camel.Handler;
-import org.apache.camel.Headers;
-import org.apache.camel.LoggingLevel;
-import org.apache.camel.Processor;
-import org.apache.camel.component.spring.ws.SpringWebserviceConstants;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.Assert;
+
+import java.sql.SQLException;
+import java.util.List;
+import java.util.Map;
+
+import static org.cleverbus.api.asynch.AsynchConstants.*;
 
 
 /**
@@ -95,6 +84,9 @@ public class AsynchInMessageRoute extends AbstractBasicRoute {
 
     @Autowired
     private ThrottlingProcessor throttlingProcessor;
+
+    @Autowired
+    private MessageService messageService;
 
     // list of validator for trace identifier is not mandatory
     @Autowired(required = false)
@@ -149,7 +141,9 @@ public class AsynchInMessageRoute extends AbstractBasicRoute {
                 }).id("throttleProcess")
 
                 // save it to DB
-                .to("jpa:" + Message.class.getName() + "?usePersist=true&persistenceUnit=" + DbConst.UNIT_NAME)
+                .beanRef(ROUTE_BEAN, "insertMessage")
+                //todo (cermak) in load causes a blockage, find out why and after resolving use it again
+//              .to("jpa:" + Message.class.getName() + "?usePersist=true&persistenceUnit=" + DbConst.UNIT_NAME)
 
                 // check guaranteed order
 //                .to(ExchangePattern.InOnly, URI_GUARANTEED_ORDER_ROUTE)
@@ -246,6 +240,22 @@ public class AsynchInMessageRoute extends AbstractBasicRoute {
     }
 
     /**
+     * Insert new message into database.
+     *
+     * @param msg message that will be saved
+     * @return saved message
+     */
+    @Handler
+    public Message insertMessage(@Body final Message msg) {
+        Assert.notNull(msg, "msg can not be null");
+
+        Log.debug("Insert new asynch message '" + msg.toHumanString() + "'.");
+
+        messageService.insertMessage(msg);
+        return msg;
+    }
+
+    /**
      * Checks if specified message should be processed in guaranteed order and if yes
      * then checks if the message is in the right order.
      *
@@ -260,25 +270,25 @@ public class AsynchInMessageRoute extends AbstractBasicRoute {
         } else {
             // guaranteed order => is the message in the right order?
             List<Message> messages = getBean(MessageService.class)
-                    .getMessagesForGuaranteedOrderForRoute(msg.getFunnelValue(), msg.isExcludeFailedState());
+                    .getMessagesForGuaranteedOrderForRoute(msg.getFunnelValues(), msg.isExcludeFailedState());
 
             if (messages.size() == 1) {
-                Log.debug("There is only one processing message with funnel value: " + msg.getFunnelValue()
+                Log.debug("There is only one processing message with funnel values: " + msg.getFunnelValues()
                         + " => continue");
 
                 return true;
 
             // is specified message first one for processing?
             } else if (messages.get(0).equals(msg)) {
-                Log.debug("Processing message (msg_id = {}, funnel value = '{}') is the first one"
-                        + " => continue", msg.getMsgId(), msg.getFunnelValue());
+                Log.debug("Processing message (msg_id = {}, funnel values = '{}') is the first one"
+                        + " => continue", msg.getMsgId(), msg.getFunnelValues());
 
                 return true;
 
             } else {
-                Log.debug("There is at least one processing message with funnel value '{}'"
+                Log.debug("There is at least one processing message with funnel values '{}'"
                         + " before current message (msg_id = {}); message {} will be postponed.",
-                        msg.getFunnelValue(), msg.getMsgId(), msg.toHumanString());
+                        msg.getFunnelValues(), msg.getMsgId(), msg.toHumanString());
 
                 return false;
             }

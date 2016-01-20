@@ -16,11 +16,7 @@
 
 package org.cleverbus.core.camel;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.LoggingLevel;
-import org.apache.camel.Processor;
-import org.apache.camel.Produce;
-import org.apache.camel.ProducerTemplate;
+import org.apache.camel.*;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.spi.Synchronization;
@@ -44,7 +40,7 @@ public class CamelStopOnCompletionTest extends CamelTestSupport {
     @Test
     public void testStopOnCompletion() throws InterruptedException {
         MockEndpoint mock = getMockEndpoint("mock:test");
-        mock.expectedMessageCount(0);
+        mock.expectedMessageCount(2);
 
         String result = producer.requestBody("direct:routeONE", "any body", String.class);
         assertEquals("any body-routeONE-routeTWO", result);

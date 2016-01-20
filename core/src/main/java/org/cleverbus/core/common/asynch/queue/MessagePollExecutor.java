@@ -16,9 +16,12 @@
 
 package org.cleverbus.core.common.asynch.queue;
 
-import java.util.Date;
-import java.util.List;
-
+import org.apache.camel.Exchange;
+import org.apache.camel.ExchangePattern;
+import org.apache.camel.Processor;
+import org.apache.camel.ProducerTemplate;
+import org.apache.camel.builder.ExchangeBuilder;
+import org.apache.commons.lang.time.DateUtils;
 import org.cleverbus.api.asynch.AsynchConstants;
 import org.cleverbus.api.entity.Message;
 import org.cleverbus.api.exception.IntegrationException;
@@ -28,16 +31,12 @@ import org.cleverbus.common.log.Log;
 import org.cleverbus.core.common.asynch.LogContextHelper;
 import org.cleverbus.core.common.event.AsynchEventHelper;
 import org.cleverbus.spi.msg.MessageService;
-
-import org.apache.camel.Exchange;
-import org.apache.camel.ExchangePattern;
-import org.apache.camel.Processor;
-import org.apache.camel.ProducerTemplate;
-import org.apache.camel.builder.ExchangeBuilder;
-import org.apache.commons.lang.time.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.Assert;
+
+import java.util.Date;
+import java.util.List;
 
 
 /**
@@ -166,26 +165,26 @@ public class MessagePollExecutor implements Runnable {
             return true;
         } else {
             // guaranteed order => is the message in the right order?
-            List<Message> messages = messageService.getMessagesForGuaranteedOrderForRoute(msg.getFunnelValue(),
+            List<Message> messages = messageService.getMessagesForGuaranteedOrderForRoute(msg.getFunnelValues(),
                     msg.isExcludeFailedState());
 
             if (messages.size() == 1) {
-                Log.debug("There is only one processing message with funnel value: " + msg.getFunnelValue()
+                Log.debug("There is only one processing message with funnel values: " + msg.getFunnelValues()
                         + " => continue");
 
                 return true;
 
             // is specified message first one for processing?
             } else if (messages.get(0).equals(msg)) {
-                Log.debug("Processing message (msg_id = {}, funnel value = '{}') is the first one"
-                        + " => continue", msg.getMsgId(), msg.getFunnelValue());
+                Log.debug("Processing message (msg_id = {}, funnel values = '{}') is the first one"
+                        + " => continue", msg.getMsgId(), msg.getFunnelValues());
 
                 return true;
 
             } else {
-                Log.debug("There is at least one processing message with funnel value '{}'"
+                Log.debug("There is at least one processing message with funnel values '{}'"
                         + " before current message (msg_id = {}); message {} will be postponed.",
-                        msg.getFunnelValue(), msg.getMsgId(), msg.toHumanString());
+                        msg.getFunnelValues(), msg.getMsgId(), msg.toHumanString());
 
                 return false;
             }

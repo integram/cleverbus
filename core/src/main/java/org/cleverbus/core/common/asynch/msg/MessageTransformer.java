@@ -16,34 +16,31 @@
 
 package org.cleverbus.core.common.asynch.msg;
 
-import java.util.Date;
-
-import javax.annotation.Nullable;
-import javax.xml.transform.Source;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-
-import org.cleverbus.api.asynch.AsynchConstants;
-import org.cleverbus.api.asynch.model.TraceHeader;
-import org.cleverbus.api.asynch.model.TraceIdentifier;
-import org.cleverbus.api.entity.EntityTypeExtEnum;
-import org.cleverbus.api.entity.ExternalSystemExtEnum;
-import org.cleverbus.api.entity.Message;
-import org.cleverbus.api.entity.MsgStateEnum;
-import org.cleverbus.api.entity.ServiceExtEnum;
-import org.cleverbus.core.common.asynch.AsynchInMessageRoute;
-import org.cleverbus.core.common.asynch.TraceHeaderProcessor;
-
 import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.Handler;
 import org.apache.camel.Header;
 import org.apache.camel.component.spring.ws.SpringWebserviceMessage;
-import org.apache.commons.lang.BooleanUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.cleverbus.api.asynch.AsynchConstants;
+import org.cleverbus.api.asynch.model.TraceHeader;
+import org.cleverbus.api.asynch.model.TraceIdentifier;
+import org.cleverbus.api.entity.*;
+import org.cleverbus.core.common.asynch.AsynchInMessageRoute;
+import org.cleverbus.core.common.asynch.TraceHeaderProcessor;
 import org.springframework.util.Assert;
 import org.springframework.ws.soap.saaj.SaajSoapMessage;
 import org.springframework.xml.transform.StringResult;
+
+import javax.annotation.Nullable;
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 
 /**
@@ -94,6 +91,7 @@ public final class MessageTransformer {
             @Header(value = AsynchConstants.OBJECT_ID_HEADER) @Nullable String objectId,
             @Header(value = AsynchConstants.ENTITY_TYPE_HEADER) @Nullable EntityTypeExtEnum entityType,
             @Header(value = AsynchConstants.FUNNEL_VALUE_HEADER) @Nullable String funnelValue,
+            @Header(value = AsynchConstants.FUNNEL_VALUES_HEADER) @Nullable List<String> funnelValues,
             @Header(value = AsynchConstants.GUARANTEED_ORDER_HEADER) @Nullable Boolean guaranteedOrder,
             @Header(value = AsynchConstants.EXCLUDE_FAILED_HEADER) @Nullable Boolean excludeFailedState) {
 
@@ -128,7 +126,22 @@ public final class MessageTransformer {
         msg.setObjectId(objectId);
         msg.setEntityType(entityType);
 
-        msg.setFunnelValue(funnelValue);
+        //setting funnel value information
+        List<String> funnels = new ArrayList<String>();
+        if (!StringUtils.isBlank(funnelValue)) {
+            funnels.add(funnelValue);
+        }
+        //settings funnel values
+        if (!CollectionUtils.isEmpty(funnelValues)){
+            for (String fnlValue : funnelValues){
+                if (!StringUtils.isBlank(fnlValue)) {
+                    funnels.add(fnlValue);
+                }
+            }
+        }
+        if (!funnels.isEmpty()) {
+            msg.setFunnelValues(funnels);
+        }
         msg.setGuaranteedOrder(BooleanUtils.isTrue(guaranteedOrder));
         msg.setExcludeFailedState(BooleanUtils.isTrue(excludeFailedState));
 

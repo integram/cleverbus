@@ -16,22 +16,21 @@
 
 package org.cleverbus.component.funnel;
 
-import java.util.Map;
-
+import org.apache.camel.Endpoint;
+import org.apache.camel.impl.DefaultComponent;
 import org.cleverbus.api.entity.Message;
 import org.cleverbus.spi.AsyncEventNotifier;
 import org.cleverbus.spi.msg.MessageService;
-
-import org.apache.camel.Endpoint;
-import org.apache.camel.impl.DefaultComponent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.Assert;
+
+import java.util.Map;
 
 
 /**
  * Apache Camel component "msg-funnel" for filtering processing messages.
  * This component ensures that there is only one processing message with same
- * {@link Message#getFunnelValue() funnel value}.
+ * {@link Message#getFunnelValue() funnel value} or with funnel value defined in uri.
  *
  * <p/>
  * Syntax: {@code msg-funnel:default[?options]} where options are
@@ -40,6 +39,7 @@ import org.springframework.util.Assert;
  *     <li>guaranteedOrder - if funnel component should guaranteed order of processing messages
  *     <li>excludeFailedState - if FAILED state should be involved in guaranteed order
  *     <li>id - funnel component identifier
+ *     <li>funnelValue - funnel value
  * </ul>
  *
  * <p/>

@@ -16,39 +16,24 @@
 
 package org.cleverbus.api.entity;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-
-import javax.annotation.Nullable;
-import javax.persistence.Access;
-import javax.persistence.AccessType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
-import javax.persistence.Transient;
-import javax.persistence.UniqueConstraint;
-
-import org.cleverbus.api.common.HumanReadable;
-import org.cleverbus.api.exception.ErrorExtEnum;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.cleverbus.api.common.HumanReadable;
+import org.cleverbus.api.exception.ErrorExtEnum;
+import org.hibernate.annotations.*;
+import org.hibernate.annotations.CascadeType;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.util.Assert;
+
+import javax.annotation.Nullable;
+import javax.persistence.*;
+import javax.persistence.AccessType;
+import javax.persistence.Entity;
+import javax.persistence.Table;
+import java.text.Collator;
+import java.util.*;
 
 
 /**
@@ -156,9 +141,6 @@ public class Message implements HumanReadable {
     @Column(name = "parent_binding_type", length = 25, nullable = true)
     private BindingTypeEnum parentBindingType;
 
-    @Column(name = "funnel_value", length = 50, nullable = true)
-    private String funnelValue;
-
     @Column(name = "funnel_component_id", length = 50, nullable = true)
     private String funnelComponentId;
 
@@ -173,6 +155,10 @@ public class Message implements HumanReadable {
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "message")
     private Set<Request> requests = new TreeSet<Request>();
+
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "message")
+    @Cascade(CascadeType.ALL)
+    private Set<Funnel> funnels = new HashSet<Funnel>();
 
     @Transient
     private boolean parentMessage;
@@ -656,26 +642,11 @@ public class Message implements HumanReadable {
     }
 
     /**
-     * Gets value for funnel filtering - you can have funnel that will ensure that there is only one processing
-     * message with same funnel value.
-     *
-     * @return funnel value
-     * @see #getFunnelComponentId()
-     */
-    public String getFunnelValue() {
-        return funnelValue;
-    }
-
-    public void setFunnelValue(String funnelValue) {
-        this.funnelValue = funnelValue;
-    }
-
-    /**
      * Gets funnel component identifier.
      * Each funnel has unique identifier that says where is route currently being processed.
      *
      * @return funnel component identifier
-     * @see #getFunnelValue()
+     * @see Funnel
      */
     public String getFunnelComponentId() {
         return funnelComponentId;
@@ -689,7 +660,7 @@ public class Message implements HumanReadable {
      * Gets flag (true/false) if route should be processed in guaranteed order or not.
      *
      * @return {@code true} for guaranteed order otherwise {@code false}
-     * @see #getFunnelValue()
+     * @see Funnel#getFunnelValue()
      * @see #isExcludeFailedState()
      */
     public boolean isGuaranteedOrder() {
@@ -747,6 +718,81 @@ public class Message implements HumanReadable {
             }
         });
         return result;
+    }
+
+    /**
+     * Gets funnel values.
+     * Funnel value gets from {@link Funnel#getFunnelValue()}.
+     *
+     * @return funnel values
+     * @see #getFunnels()
+     * @see Funnel
+     */
+    public List<String> getFunnelValues() {
+        List<String> result = new ArrayList<String>(funnels.size());
+        for (Funnel funnel : funnels){
+            result.add(funnel.getFunnelValue());
+        }
+        return result;
+    }
+
+    /**
+     * Sets funnel values.
+     * Funnel value set to {@link Funnel#setFunnelValue(String)}.
+     *
+     * @param funnelValues funnel values
+     * @see #setFunnels(Collection)
+     * @see Funnel
+     */
+    public void setFunnelValues(Collection<String> funnelValues) {
+        Assert.notNull(funnelValues);
+
+        //set for better searching funnel values
+        Set<String> funnelValuesInSet = new HashSet<String>(funnelValues);
+
+        List<Funnel> funnels = new ArrayList<Funnel>();
+        for (Funnel funnel : this.funnels) {
+            //if funnel is in list from parameter, then we add in
+            if (funnelValuesInSet.contains(funnel.getFunnelValue())){
+                funnels.add(funnel);
+                funnelValuesInSet.remove(funnel.getFunnelValue());
+            }
+        }
+        //add new funnel values
+        for (String funnelValue : funnelValuesInSet){
+            funnels.add(new Funnel(this, funnelValue));
+        }
+        //set new funnels
+        setFunnels(funnels);
+    }
+
+    /**
+     * Gets the set of referenced funnel values.
+     *
+     * @return the set of referenced funnel values
+     */
+    protected List<Funnel> getFunnels() {
+        List<Funnel> result = new ArrayList<Funnel>(funnels);
+        Collections.sort(result, new Comparator<Funnel>() {
+            @Override
+            public int compare(Funnel o1, Funnel o2) {
+                return Collator.getInstance(LocaleContextHolder.getLocale()).compare(
+                        o1.getFunnelValue(), o2.getFunnelValue());
+            }
+        });
+        return result;
+    }
+
+    /**
+     * Sets referenced funnel values.
+     *
+     * @param funnels set funnel values
+     */
+    protected void setFunnels(Collection<Funnel> funnels) {
+        Assert.notNull(funnels, "funnels must not be null");
+
+        this.funnels.clear();
+        this.funnels.addAll(funnels);
     }
 
     public int getProcessingPriority() {
@@ -809,7 +855,6 @@ public class Message implements HumanReadable {
             .append("businessError", StringUtils.substring(businessError, 0, 200))
             .append("parentMsgId", parentMsgId)
             .append("parentBindingType", parentBindingType)
-            .append("funnelValue", funnelValue)
             .append("funnelComponentId", funnelComponentId)
             .append("guaranteedOrder", guaranteedOrder)
             .append("excludeFailedState", excludeFailedState)

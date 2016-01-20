@@ -63,4 +63,6 @@
     <!-- stopping -->
     <bean id="stoppingService" class="org.cleverbus.core.common.asynch.stop.StopServiceNodeImpl"/>
 
+    <!-- converter -->
+    <bean id="removeStaxConverter" class="org.cleverbus.core.common.converter.RemoveStAXConverters"/>
 </beans>

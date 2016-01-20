@@ -16,20 +16,16 @@
 
 package org.cleverbus.api.asynch.msg;
 
-import java.util.Date;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
-import org.cleverbus.api.entity.BindingTypeEnum;
-import org.cleverbus.api.entity.EntityTypeExtEnum;
-import org.cleverbus.api.entity.Message;
-import org.cleverbus.api.entity.MsgStateEnum;
-import org.cleverbus.api.entity.ServiceExtEnum;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.builder.ToStringBuilder;
+import org.cleverbus.api.entity.*;
 import org.springframework.util.Assert;
+
+import javax.annotation.Nullable;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.UUID;
 
 
 /**
@@ -54,7 +50,7 @@ public final class ChildMessage {
 
     private String body;
 
-    private String funnelValue;
+    private Collection<String> funnelValues;
 
     /**
      * Creates child message with specified binding type to parent message.
@@ -70,11 +66,12 @@ public final class ChildMessage {
      * @param entityType the type of the entity that is being changed.
      *                   This parameter serves for finding messages in the queue which deals with identical object,
      *                   see {@link Message#getEntityTypeInternal()} for more details
-     * @param funnelValue the funnel value
+     * @param funnelValues the funnel values
      *
      */
     public ChildMessage(Message parentMessage, BindingTypeEnum bindingType, ServiceExtEnum service, String operationName,
-            String body, @Nullable String objectId, @Nullable EntityTypeExtEnum entityType, @Nullable String funnelValue) {
+            String body, @Nullable String objectId, @Nullable EntityTypeExtEnum entityType,
+            @Nullable Collection<String> funnelValues) {
 
         Assert.notNull(parentMessage, "the parentMessage must not be null");
         Assert.notNull(bindingType, "the bindingType must not be null");
@@ -89,7 +86,7 @@ public final class ChildMessage {
         this.objectId = objectId;
         this.entityType = entityType;
         this.body = body;
-        this.funnelValue = funnelValue;
+        this.funnelValues = funnelValues;
     }
 
     /**
@@ -143,7 +140,7 @@ public final class ChildMessage {
         msg.setObjectId(childMsg.getObjectId());
         msg.setEntityType(childMsg.getEntityType());
         msg.setPayload(childMsg.getBody());
-        msg.setFunnelValue(childMsg.getFunnelValue());
+        msg.setFunnelValues(childMsg.getFunnelValues());
 
         return msg;
     }
@@ -178,9 +175,12 @@ public final class ChildMessage {
         return body;
     }
 
-    @Nullable
-    public String getFunnelValue() {
-        return funnelValue;
+    public Collection<String> getFunnelValues() {
+        if (funnelValues == null) {
+            return Collections.emptyList();
+        } else {
+            return Collections.unmodifiableCollection(funnelValues);
+        }
     }
 
     @Override
@@ -192,7 +192,7 @@ public final class ChildMessage {
             .append("operationName", operationName)
             .append("objectId", objectId)
             .append("entityType", entityType != null ? entityType.getEntityType() : null)
-            .append("funnelValue", funnelValue)
+            .append("funnelValues", funnelValues)
             .append("body", StringUtils.substring(body, 0, 500))
             .toString();
     }

@@ -86,7 +86,7 @@
         </tr>
         <tr>
             <td><@spring.message "msg.detail.funnelValue"/></td>
-            <td><#if msg.funnelValue??>${msg.funnelValue}</#if>&nbsp;</td>
+            <td><#if msg.funnelValues?size != 0>${msg.funnelValues?join(", ")}</#if>&nbsp;</td>
         </tr>
         <tr>
             <td><@spring.message "msg.detail.funnelComponentId"/></td>

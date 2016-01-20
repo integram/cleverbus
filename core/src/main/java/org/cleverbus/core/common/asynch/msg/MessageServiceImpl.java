@@ -16,14 +16,8 @@
 
 package org.cleverbus.core.common.asynch.msg;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.cleverbus.api.entity.ExternalSystemExtEnum;
 import org.cleverbus.api.entity.Message;
 import org.cleverbus.api.entity.MsgStateEnum;
@@ -32,12 +26,12 @@ import org.cleverbus.common.log.Log;
 import org.cleverbus.core.common.dao.MessageDao;
 import org.cleverbus.core.common.exception.ExceptionTranslator;
 import org.cleverbus.spi.msg.MessageService;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
+
+import javax.annotation.Nullable;
+import java.util.*;
 
 
 /**
@@ -52,18 +46,25 @@ public class MessageServiceImpl implements MessageService {
 
     @Transactional
     @Override
+    public void insertMessage(final Message message) {
+        Assert.notNull(message, "the message must not be null");
+        Assert.state(message.getState() == MsgStateEnum.NEW || message.getState() == MsgStateEnum.PROCESSING,
+                "new message can be in NEW or PROCESSING state only");
+
+        message.setLastUpdateTimestamp(new Date());
+
+        messageDao.insert(message);
+
+        Log.debug("Inserted new message " + message.toHumanString());
+    }
+
+    @Transactional
+    @Override
     public void insertMessages(Collection<Message> messages) {
         Assert.notNull(messages, "the messages must not be null");
 
         for (Message msg : messages) {
-            Assert.state(msg.getState() == MsgStateEnum.NEW || msg.getState() == MsgStateEnum.PROCESSING,
-                    "new message can be in NEW or PROCESSING state only");
-
-            msg.setLastUpdateTimestamp(new Date());
-
-            messageDao.insert(msg);
-
-            Log.debug("Inserted new message " + msg.toHumanString());
+            insertMessage(msg);
         }
     }
 
@@ -339,21 +340,29 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public int getCountProcessingMessagesForFunnel(String funnelValue, int idleInterval, String funnelCompId) {
-        Assert.hasText(funnelValue, "the funnelValue must not be empty");
+    public int getCountProcessingMessagesForFunnel(Collection<String> funnelValues, int idleInterval,
+                                                   String funnelCompId) {
+        Assert.notNull(funnelValues, "the funnelValues must not be empty");
+        Assert.hasText(funnelCompId, "funnelCompId must not be empty");
 
-        return messageDao.getCountProcessingMessagesForFunnel(funnelValue, idleInterval, funnelCompId);
+        return messageDao.getCountProcessingMessagesForFunnel(funnelValues, idleInterval, funnelCompId);
     }
 
     @Override
-    public List<Message> getMessagesForGuaranteedOrderForRoute(String funnelValue, boolean excludeFailedState) {
-        return messageDao.getMessagesForGuaranteedOrderForRoute(funnelValue, excludeFailedState);
+    public List<Message> getMessagesForGuaranteedOrderForRoute(Collection<String> funnelValues,
+                                                               boolean excludeFailedState) {
+        Assert.notNull(funnelValues, "funnelValues must not be null");
+
+        return messageDao.getMessagesForGuaranteedOrderForRoute(funnelValues, excludeFailedState);
     }
 
     @Override
-    public List<Message> getMessagesForGuaranteedOrderForFunnel(String funnelValue, int idleInterval,
+    public List<Message> getMessagesForGuaranteedOrderForFunnel(Collection<String> funnelValues, int idleInterval,
             boolean excludeFailedState, String funnelCompId) {
-        return messageDao.getMessagesForGuaranteedOrderForFunnel(funnelValue, idleInterval, excludeFailedState,
+        Assert.notNull(funnelValues, "funnelValues must not be null");
+        Assert.hasText(funnelCompId, "funnelCompId must not be empty");
+
+        return messageDao.getMessagesForGuaranteedOrderForFunnel(funnelValues, idleInterval, excludeFailedState,
                 funnelCompId);
     }
 
@@ -388,5 +397,42 @@ public class MessageServiceImpl implements MessageService {
         messageDao.update(msg);
 
         Log.debug("Sets funnel ID of the message " + msg.toHumanString() + " to value: " + funnelCompId);
+    }
+
+    @Transactional
+    @Override
+    public void setFunnelValue(Message msg, Collection<String> funnelValues) {
+        Assert.notNull(msg, "the msg must not be null");
+        Assert.notNull(funnelValues, "the funnelValues must not be empty");
+
+        Assert.isTrue(msg.getState().equals(MsgStateEnum.PROCESSING),
+                "the message must be in PROCESSING state, but state is " + msg.getState());
+
+        msg.setFunnelValues(funnelValues);
+        msg.setLastUpdateTimestamp(new Date());
+
+        messageDao.update(msg);
+
+        Log.debug("Sets funnel value of the message " + msg.toHumanString() + " to values: " + funnelValues);
+    }
+
+    @Transactional
+    @Override
+    public void setFunnelComponentIdAndValue(Message msg, String funnelCompId, Collection<String> funnelValues) {
+        Assert.notNull(msg, "the msg must not be null");
+        Assert.hasText(funnelCompId, "the funnelCompId must not be empty");
+        Assert.notNull(funnelValues, "the funnelValues must not be empty");
+
+        Assert.isTrue(msg.getState().equals(MsgStateEnum.PROCESSING),
+                "the message must be in PROCESSING state, but state is " + msg.getState());
+
+        msg.setFunnelComponentId(funnelCompId);
+        msg.setFunnelValues(funnelValues);
+        msg.setLastUpdateTimestamp(new Date());
+
+        messageDao.update(msg);
+
+        Log.debug("Sets funnel ID of the message " + msg.toHumanString() + " to value: " + funnelCompId
+                + " and funnel values to: " + funnelValues);
     }
 }

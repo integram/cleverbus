@@ -16,13 +16,13 @@
 
 package org.cleverbus.core.common.dao;
 
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import org.cleverbus.api.entity.ExternalSystemExtEnum;
 import org.cleverbus.api.entity.Message;
 import org.cleverbus.api.entity.MsgStateEnum;
+
+import javax.annotation.Nullable;
+import java.util.Collection;
+import java.util.List;
 
 
 /**
@@ -135,38 +135,51 @@ public interface MessageDao {
     int getCountMessages(MsgStateEnum state, @Nullable Integer interval);
 
     /**
-     * Gets count of processing messages (PROCESSING, WAITING, WAITING_FOR_RES) with same funnel value
-     * and for specified funnel ID.
+     * Gets count of processing messages (PROCESSING, WAITING, WAITING_FOR_RES) that contains one funnel values from
+     * parameter and for specified funnel ID.
+     * <p>
+     * In {@link Message} will be return items, which has contains only one funnel value from parameter funnelValues.
+     * If parameter funnelValues is empty, no {@link Message} will be returned.
+     * </p>
      *
-     * @param funnelValue the funnel value
+     * @param funnelValues  the funnel values
      * @param idleInterval interval (in seconds) that determines how long can be message processing
      * @param funnelCompId the funnel component ID
      * @return count of messages
      */
-    int getCountProcessingMessagesForFunnel(String funnelValue, int idleInterval, String funnelCompId);
+    int getCountProcessingMessagesForFunnel(Collection<String> funnelValues, int idleInterval, String funnelCompId);
 
     /**
-     * Gets list of messages with specified funnel value for guaranteed processing order of whole routes.
+     * Gets list of messages which contain one funnel values from parameter for guaranteed processing order of
+     * whole routes.
+     * <p>
+     * In {@link Message} will be return items, which has contains only one funnel value from parameter funnelValues.
+     * If parameter funnelValues is empty, no {@link Message} will be returned.
+     * </p>
      *
-     * @param funnelValue the funnel value
+     * @param funnelValues       the funnel values
      * @param excludeFailedState {@link MsgStateEnum#FAILED FAILED} state is used by default;
      *                           use {@code true} if you want to exclude FAILED state
      * @return list of messages ordered by {@link Message#getMsgTimestamp() message timestamp}
      */
-    List<Message> getMessagesForGuaranteedOrderForRoute(String funnelValue, boolean excludeFailedState);
+    List<Message> getMessagesForGuaranteedOrderForRoute(Collection<String> funnelValues, boolean excludeFailedState);
 
     /**
-     * Gets list of messages with specified funnel value for guaranteed processing order of messages
+     * Gets list of messages which contain one funnel values from parameter for guaranteed processing order of messages
      * for specified funnel.
+     * <p>
+     * In {@link Message} will be return items, which has contains only one funnel value from parameter funnelValues.
+     * If parameter funnelValues is empty, no {@link Message} will be returned.
+     * </p>
      *
-     * @param funnelValue the funnel value
-     * @param idleInterval interval (in seconds) that determines how long can message be processing
+     * @param funnelValues       the funnel value
+     * @param idleInterval       interval (in seconds) that determines how long can message be processing
      * @param excludeFailedState {@link MsgStateEnum#FAILED FAILED} state is used by default;
      *                           use {@code true} if you want to exclude FAILED state
-     * @param funnelCompId the funnel component ID
+     * @param funnelCompId       the funnel component ID
      * @return list of messages ordered by {@link Message#getMsgTimestamp() message timestamp}
      */
-    List<Message> getMessagesForGuaranteedOrderForFunnel(String funnelValue, int idleInterval,
+    List<Message> getMessagesForGuaranteedOrderForFunnel(Collection<String> funnelValues, int idleInterval,
                 boolean excludeFailedState, String funnelCompId);
 
     /**
