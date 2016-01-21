@@ -1,12 +1,12 @@
-﻿<h1>Release notes</h1>
+# Release notes
 
 Release notes are published for the following products
-- <a href="#enterprise-edition">CleverBus Enterprise Edition</a>
-- <a href="#community-edition">CleverBus Community Edition</a>
+- [CleverBus Enterprise Edition](#enterprise-edition)
+- [CleverBus Community Edition](#community-edition)
 
-<h1>Enterprise Edition</h1>
+# Enterprise Edition
 
-<h2> v2.2.0 (20.1.2016)</h2>
+## v2.2.0 (20.1.2016)
 
 <h3>        Chyba
 </h3>
@@ -80,7 +80,7 @@ Release notes are published for the following products
 </li>
 </ul>
 
-<h2>v2.1.3 (21.12.2015)</h2>
+## v2.1.3 (21.12.2015)
 
 <h3>        Chyba
 </h3>
@@ -96,7 +96,7 @@ Release notes are published for the following products
 </li>
 </ul>
 
-<h2>v2.1.2 (11.12.2015)</h2>
+## v2.1.2 (11.12.2015)
 
 <h3>        Chyba
 </h3>
@@ -105,7 +105,7 @@ Release notes are published for the following products
 </li>
 </ul>
 
-<h2>v2.1.1 (9.12.2015)</h2>
+## v2.1.1 (9.12.2015)
 
 <h3>        Chyba
 </h3>
@@ -139,7 +139,7 @@ Release notes are published for the following products
 </li>
 </ul>
 
-<h2>v2.1.0 (31.7.2015)</h2>
+## v2.1.0 (31.7.2015)
 
 <h3>        Chyba
 </h3>
@@ -208,7 +208,7 @@ Release notes are published for the following products
 </ul>
 
 
-<h2>v2.0.4 (30.10.2015)</h2>
+## v2.0.4 (30.10.2015)
 
 <h3>        Chyba
 </h3>
@@ -241,7 +241,7 @@ Release notes are published for the following products
 </li>
 </ul>
 
-<h2>v2.0.3 (16.6.2015)</h2>
+## v2.0.3 (16.6.2015)
 
 <h3>        Chyba
 </h3>
@@ -259,7 +259,7 @@ Release notes are published for the following products
 </li>
 </ul>
 
-<h2>v2.0.2 (4.5.2015)</h2>
+## v2.0.2 (4.5.2015)
 
 <h3>        Chyba
 </h3>
@@ -268,7 +268,7 @@ Release notes are published for the following products
 </li>
 </ul>
 
-<h2>v2.0.1 (17.4.2015)<h2>
+## v2.0.1 (17.4.2015)
 
 <h3>        Chyba
 </h3>
@@ -277,7 +277,7 @@ Release notes are published for the following products
 </li>
 </ul>
 
-<h2>v2.0.0 (13.4.2015)</h2>
+## v2.0.0 (13.4.2015)
 
 <h3>        Úkol
 </h3>
@@ -290,7 +290,7 @@ Release notes are published for the following products
 </li>
 </ul>
 
-<h2>v1.3 (29.7.2015)</h2>
+## v1.3 (29.7.2015)
 <h3>        Chyba
 </h3>
 <ul>
@@ -318,11 +318,11 @@ Release notes are published for the following products
 </li>
 </ul>
 
-<h2>v1.2 (1.4.2015)</h2>
+## v1.2 (1.4.2015)
 
 GitHub verze (org.cleverbus) Java 1.6 suppport
 
-<h2>1.1 (24.11.2014)</h2>
+## v1.1 (24.11.2014)
     
 <h3>        Chyba
 </h3>
@@ -351,11 +351,11 @@ GitHub verze (org.cleverbus) Java 1.6 suppport
 </ul>
 
 
-<h1>Community Edition</h1>
+# Community Edition
 
-<<Info("CleverBus can be downloaded from <a href='https://github.com/integram/cleverbus/releases'>GitHub releases</a>")>>
+CleverBus can be downloaded from <a href='https://github.com/integram/cleverbus/releases'>GitHub releases</a>
 
-<h2>v2.0 (30.10.2015)</h2>
+## v2.0 (30.10.2015)
 
 <h3>        Chyba
 </h3>
@@ -402,7 +402,7 @@ GitHub verze (org.cleverbus) Java 1.6 suppport
 </li>
 </ul>                                                                                                   
 
-<h2>1.1 (24.11.2014)</h2>
+## 1.1 (24.11.2014)
 
 <a href="https://github.com/integram/cleverbus/releases/tag/cleverbus-integration-1.1">Repository</a>
 
