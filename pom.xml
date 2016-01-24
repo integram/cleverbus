@@ -48,36 +48,20 @@
             <organization>Cleverlance</organization>
             <organizationUrl>http://www.cleverlance.com</organizationUrl>
         </developer>
+        <developer>
+            <name>Radek Cermak</name>
+            <email>radek.cermak@cleverlance.com</email>
+            <organization>Cleverlance</organization>
+            <organizationUrl>http://www.cleverlance.com</organizationUrl>
+        </developer>
     </developers>
 
     <scm>
-        <connection>scm:git:https://repo.cleverlance.com/git/org.cleverbus.integration</connection>
-        <developerConnection>scm:git:https://repo.cleverlance.com/git/org.cleverbus.integration</developerConnection>
-        <url>https://repo.cleverlance.com/git/org.cleverbus.integration</url>
-    <tag>HEAD</tag>
-  </scm>
-
-    <distributionManagement>
-        <repository>
-            <id>nexus</id>
-            <name>Cleverlance Release Repository</name>
-            <url>https://maven.cleverlance.com/nexus/content/repositories/releases</url>
-            <uniqueVersion>false</uniqueVersion>
-        </repository>
-        <snapshotRepository>
-            <id>nexus</id>
-            <name>Cleverlance Snapshot Repository</name>
-            <url>https://maven.cleverlance.com/nexus/content/repositories/snapshots</url>
-            <uniqueVersion>false</uniqueVersion>
-        </snapshotRepository>
-    </distributionManagement>
-
-    <repositories>
-        <repository>
-            <id>nexus</id>
-            <url>https://maven.cleverlance.com/nexus/content/groups/public</url>
-        </repository>
-    </repositories>
+        <connection>scm:git:https://github.com/integram/cleverbus.git</connection>
+        <developerConnection>scm:git:https://github.com/integram/cleverbus.git</developerConnection>
+        <url>https://github.com/integram/cleverbus.git</url>
+        <tag>HEAD</tag>
+    </scm>
 
     <modules>
         <module>common</module>
